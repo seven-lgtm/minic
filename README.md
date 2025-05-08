@@ -705,6 +705,9 @@ tests 目录下存放了一些简单的测试用例。
 
 由于 qemu 的用户模式在 Window 系统下不支持，因此要么在真实的开发板上运行，或者用 Linux 系统下的 qemu 来运行。
 
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --parallel
+
 ### 1.9.1. 调试运行
 
 由于默认的gdb或者lldb调试器对C++的STL模版库提供的类如string、map等的显示不够友好，

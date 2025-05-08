@@ -17,6 +17,9 @@
 void yyerror(char * msg);
 
 %}
+//左结合 右结合
+
+
 
 // 联合体声明，用于后续终结符和非终结符号属性指定使用
 %union {
@@ -28,6 +31,8 @@ void yyerror(char * msg);
     struct type_attr type;
     int op_class;
 };
+
+
 
 // 文法的开始符号
 %start  CompileUnit
@@ -62,10 +67,17 @@ void yyerror(char * msg);
 %type <node> Expr
 %type <node> LVal
 %type <node> VarDecl VarDeclExpr VarDef
-%type <node> AddExp UnaryExp PrimaryExp 
+%type <node> AddExp UnaryExp PrimaryExp  MulExp
 %type <node> RealParamList
 %type <type> BasicType
-%type <op_class> AddOp
+%type <op_class> AddOp MulOp
+
+ 
+
+%left T_ADD T_SUB          // 加减（低优先级）
+%left T_MUL T_DIV T_MOD    // 乘除取模（高优先级）
+%left  T_SUB             // 单目负号（最高优先级）
+
 %%
 
 // 编译单元可包含若干个函数与全局变量定义。要在语义分析时检查main函数存在
@@ -263,25 +275,40 @@ Expr : AddExp {
 // 由于bison不支持用闭包表达，因此需要拆分成左递归的形式
 // 改造后的左递归文法：
 // addExp : unaryExp | unaryExp addOp unaryExp | addExp addOp unaryExp
+/*
 AddExp : UnaryExp {
 		// 一目表达式
 
 		// 直接传递到归约后的节点
 		$$ = $1;
 	}
-	| UnaryExp AddOp UnaryExp {
+	| UnaryExp AddOp UnaryExp { //1+1
 		// 两个一目表达式的加减运算
 
 		// 创建加减运算节点，其孩子为两个一目表达式节点
 		$$ = create_contain_node(ast_operator_type($2), $1, $3);
 	}
-	| AddExp AddOp UnaryExp {
+	| AddExp AddOp UnaryExp { 
 		// 左递归形式可通过加减连接多个一元表达式
 
 		// 创建加减运算节点，孩子为AddExp($1)和UnaryExp($3)
 		$$ = create_contain_node(ast_operator_type($2), $1, $3);
 	}
 	;
+*/
+
+
+AddExp : AddExp T_ADD MulExp { $$ = create_contain_node(ast_operator_type::AST_OP_ADD, $1, $3); }
+        | AddExp T_SUB MulExp { $$ = create_contain_node(ast_operator_type::AST_OP_SUB, $1, $3); }
+        | MulExp { $$ = $1; }  // 基础为MulExp
+        ;
+
+MulExp : MulExp T_MUL UnaryExp { $$ = create_contain_node(ast_operator_type::AST_OP_MUL, $1, $3); }
+        | MulExp T_DIV UnaryExp { $$ = create_contain_node(ast_operator_type::AST_OP_DIV, $1, $3); }
+        | MulExp T_MOD UnaryExp { $$ = create_contain_node(ast_operator_type::AST_OP_MOD, $1, $3); }
+        | UnaryExp { $$ = $1; }  // 基础为UnaryExp
+        ;
+
 
 // 运算符 + - * / %
 AddOp: T_ADD {
@@ -290,16 +317,12 @@ AddOp: T_ADD {
 	| T_SUB {
 		$$ = (int)ast_operator_type::AST_OP_SUB;
 	}
-	| T_MUL {
-		$$ = (int)ast_operator_type::AST_OP_MUL;
-	} 
-	| T_DIV {
-		$$ = (int)ast_operator_type::AST_OP_DIV;
-	}
-	| T_MOD {
-		$$ = (int)ast_operator_type::AST_OP_MOD;
-	}
 	;
+
+MulOp: T_MUL { $$ = (int)ast_operator_type::AST_OP_MUL; }
+      | T_DIV { $$ = (int)ast_operator_type::AST_OP_DIV; }
+      | T_MOD { $$ = (int)ast_operator_type::AST_OP_MOD; }
+      ;
 
 
 
@@ -344,6 +367,7 @@ UnaryExp : PrimaryExp {
 		// 创建函数调用节点，其孩子为被调用函数名和实参，实参不为空
 		$$ = create_func_call(name_node, paramListNode);
 	}
+	 
 	;
 
 // 基本表达式支持无符号整型字面量、带括号的表达式、具有左值属性的表达式
