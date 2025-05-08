@@ -49,6 +49,9 @@
 "="         { return T_ASSIGN; }
 "+"         { return T_ADD; }
 "-"         { return T_SUB; }
+"*"         { return T_MUL; }
+"/"         { return T_DIV; }
+"%"         {return T_MOD;}
 
 
 "0"|[1-9][0-9]*	{
@@ -57,6 +60,23 @@
                 yylval.integer_num.lineno = yylineno;
                 return T_DIGIT;
             }
+
+"0"[xX][0-9a-fA-F]* {
+	            //16 进制       
+				// strtol()函数将字符串 str 按指定进制（base）解析为有符号长整型数值
+	            yylval.integer_num.val = (uint32_t)strtol(yytext, (char **)NULL, 16);
+                yylval.integer_num.lineno = yylineno;
+                return T_DIGIT;
+
+}
+
+"0"[0-7]*  {
+	           //8 进制
+	           yylval.integer_num.val = (uint32_t)strtol(yytext, (char **)NULL, 8);
+               yylval.integer_num.lineno = yylineno;
+               return T_DIGIT;
+}
+
 
 "int"       {
                 // int类型关键字 关键字的识别要在标识符识别的前边，这是因为关键字也是标识符，不过是保留的

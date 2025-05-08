@@ -83,11 +83,12 @@ enum class ast_operator_type : int {
     /// @brief 变量声明
     AST_OP_VAR_DECL,
 
-    /// @brief 二元运算符+
+    /// @brief 二元运算符+ - * / %
     AST_OP_ADD,
-
-    /// @brief 二元运算符*
-    AST_OP_SUB, //
+    AST_OP_SUB,
+    AST_OP_MUL,
+    AST_OP_DIV,
+    AST_OP_MOD,
 
     // TODO 抽象语法树其它内部节点运算符追加
 

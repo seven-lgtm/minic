@@ -49,7 +49,7 @@ void yyerror(char * msg);
 %token T_COMMA
 
 // 运算符
-%token T_ASSIGN T_SUB T_ADD
+%token T_ASSIGN T_SUB T_ADD T_MUL T_DIV T_MOD
 
 // 非终结符
 // %type指定文法的非终结符号，<>可指定文法属性
@@ -62,7 +62,7 @@ void yyerror(char * msg);
 %type <node> Expr
 %type <node> LVal
 %type <node> VarDecl VarDeclExpr VarDef
-%type <node> AddExp UnaryExp PrimaryExp
+%type <node> AddExp UnaryExp PrimaryExp 
 %type <node> RealParamList
 %type <type> BasicType
 %type <op_class> AddOp
@@ -252,7 +252,7 @@ Statement : T_RETURN Expr T_SEMICOLON {
 	;
 
 // 表达式文法 expr : AddExp
-// 表达式目前只支持加法与减法运算
+// 表达式文法  + - * /
 Expr : AddExp {
 		// 直接传递给归约后的节点
 		$$ = $1;
@@ -283,14 +283,25 @@ AddExp : UnaryExp {
 	}
 	;
 
-// 加减运算符
+// 运算符 + - * / %
 AddOp: T_ADD {
 		$$ = (int)ast_operator_type::AST_OP_ADD;
 	}
 	| T_SUB {
 		$$ = (int)ast_operator_type::AST_OP_SUB;
 	}
+	| T_MUL {
+		$$ = (int)ast_operator_type::AST_OP_MUL;
+	} 
+	| T_DIV {
+		$$ = (int)ast_operator_type::AST_OP_DIV;
+	}
+	| T_MOD {
+		$$ = (int)ast_operator_type::AST_OP_MOD;
+	}
 	;
+
+
 
 // 目前一元表达式可以为基本表达式、函数调用，其中函数调用的实参可有可无
 // 其文法为：unaryExp: primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN
@@ -380,6 +391,10 @@ LVal : T_ID {
 		free($1.id);
 	}
 	;
+
+
+
+
 
 %%
 

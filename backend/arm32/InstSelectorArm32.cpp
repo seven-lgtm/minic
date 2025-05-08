@@ -49,6 +49,9 @@ InstSelectorArm32::InstSelectorArm32(vector<Instruction *> & _irCode,
 
     translator_handlers[IRInstOperator::IRINST_OP_ADD_I] = &InstSelectorArm32::translate_add_int32;
     translator_handlers[IRInstOperator::IRINST_OP_SUB_I] = &InstSelectorArm32::translate_sub_int32;
+    translator_handlers[IRInstOperator::IRINST_OP_MUL_I] = &InstSelectorArm32::translate_mul_int32;
+    translator_handlers[IRInstOperator::IRINST_OP_DIV_I] = &InstSelectorArm32::translate_div_int32;
+    translator_handlers[IRInstOperator::IRINST_OP_MOD_I] = &InstSelectorArm32::translate_mod_int32;
 
     translator_handlers[IRInstOperator::IRINST_OP_FUNC_CALL] = &InstSelectorArm32::translate_call;
     translator_handlers[IRInstOperator::IRINST_OP_ARG] = &InstSelectorArm32::translate_arg;
@@ -302,6 +305,73 @@ void InstSelectorArm32::translate_sub_int32(Instruction * inst)
 {
     translate_two_operator(inst, "sub");
 }
+
+/// @brief 整数乘法指令翻译成ARM32汇编
+/// @param inst IR指令
+void InstSelectorArm32::translate_mul_int32(Instruction * inst)
+{
+    translate_two_operator(inst, "mul");
+}
+
+/// @brief 整数除法指令翻译成ARM32汇编
+/// @param inst IR指令
+void InstSelectorArm32::translate_div_int32(Instruction * inst)
+{
+    translate_two_operator(inst, "udiv");
+}
+
+/// @brief 整数取余指令翻译成ARM32汇编 20%8=20-(20/8)*8=4   使用除法 乘法 减法来实现mod
+/// @param inst IR指令
+void InstSelectorArm32::translate_mod_int32(Instruction * inst)
+{
+    Value * result = inst;
+    Value * a = inst->getOperand(0);
+    Value * b = inst->getOperand(1);
+
+    // 1. 加载操作数到寄存器     看a是否是寄存器，若是则寄存器寻址，否则要load变量到寄存器中
+    int reg_a = (a->getRegId() != -1) ? a->getRegId() : simpleRegisterAllocator.Allocate(a);
+    if (a->getRegId() == -1) {
+        iloc.load_var(reg_a, a); // 生成 "ldr rX, [fp, #offset]"
+    }
+    int reg_b = (b->getRegId() != -1) ? b->getRegId() : simpleRegisterAllocator.Allocate(b);
+    if (b->getRegId() == -1) {
+        iloc.load_var(reg_b, b);
+    }
+
+    // 2. 分配临时寄存器存储中间结果
+    int reg_quotient = simpleRegisterAllocator.Allocate();
+    int reg_product = simpleRegisterAllocator.Allocate();
+    int reg_result = (result->getRegId() != -1) ? result->getRegId() : simpleRegisterAllocator.Allocate(result);
+
+    // 3. 生成汇编指令
+    iloc.inst("sdiv",
+              PlatformArm32::regName[reg_quotient],
+              PlatformArm32::regName[reg_a],
+              PlatformArm32::regName[reg_b]); // sdiv rQ, rA, rB
+
+    iloc.inst("mul",
+              PlatformArm32::regName[reg_product],
+              PlatformArm32::regName[reg_quotient],
+              PlatformArm32::regName[reg_b]); // mul rP, rQ, rB
+
+    iloc.inst("sub",
+              PlatformArm32::regName[reg_result],
+              PlatformArm32::regName[reg_a],
+              PlatformArm32::regName[reg_product]); // sub rR, rA, rP
+
+    // 4. 存储结果（若目标在内存）    这里还要看一下 
+    if (result->getRegId() == -1) {
+        iloc.store_var(reg_result, result, ARM32_TMP_REG_NO);
+    }
+
+    // 5. 释放寄存器
+    simpleRegisterAllocator.free(a);
+    simpleRegisterAllocator.free(b);
+    simpleRegisterAllocator.free(reg_quotient);
+    simpleRegisterAllocator.free(reg_product);
+    simpleRegisterAllocator.free(result);
+}
+
 
 /// @brief 函数调用指令翻译成ARM32汇编
 /// @param inst IR指令
