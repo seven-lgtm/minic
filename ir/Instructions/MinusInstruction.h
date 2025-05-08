@@ -21,18 +21,16 @@
 ///
 /// @brief 二元运算指令
 ///
-class BinaryInstruction : public Instruction {
+class MinusInstruction : public Instruction {
 
 public:
     /// @brief 构造函数
     /// @param _op 操作符
     /// @param _result 结果操作数
-    /// @param _srcVal1 源操作数1
-    /// @param _srcVal2 源操作数2
-    BinaryInstruction(Function * _func, IRInstOperator _op, Value * _srcVal1, Value * _srcVal2, Type * _type);
+    /// @param _srcVal 源操作数1
+    
+    MinusInstruction(Function * _func, IRInstOperator _op, Value * _srcVal, Type * _type);
 
     /// @brief 转换成字符串
     void toString(std::string & str) override;
 };
-
-
