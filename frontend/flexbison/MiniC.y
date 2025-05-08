@@ -17,7 +17,7 @@
 void yyerror(char * msg);
 
 %}
-//左结合 右结合
+
 
 
 
@@ -76,7 +76,7 @@ void yyerror(char * msg);
 
 %left T_ADD T_SUB          // 加减（低优先级）
 %left T_MUL T_DIV T_MOD    // 乘除取模（高优先级）
-%left  T_SUB             // 单目负号（最高优先级）
+%right UMINUS           // 单目负号（最高优先级）
 
 %%
 
@@ -388,7 +388,9 @@ PrimaryExp :  T_L_PAREN Expr T_R_PAREN {
 		// 直接传递到归约后的非终结符号PrimaryExp
 		$$ = $1;
 	}
+	 | T_SUB UnaryExp %prec UMINUS{ $$ = create_contain_node(ast_operator_type::AST_OP_NEG, $2); }  // 单目负号
 	;
+	
 
 // 实参表达式支持逗号分隔的若干个表达式
 // 其文法为：realParamList: expr (T_COMMA expr)*
