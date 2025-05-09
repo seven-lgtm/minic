@@ -705,7 +705,40 @@ tests 目录下存放了一些简单的测试用例。
 
 由于 qemu 的用户模式在 Window 系统下不支持，因此要么在真实的开发板上运行，或者用 Linux 系统下的 qemu 来运行。
 
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+// InstSelectorArm32.cpp 中新增函数
+void InstSelectorArm32::translate_neg_int32(Instruction * inst)
+{
+    Value * result = inst;
+    Value * src = inst->getOperand(0);
+
+    // 分配源操作数寄存器
+    int32_t src_reg_no = src->getRegId();
+    if (src_reg_no == -1) {
+        src_reg_no = simpleRegisterAllocator.Allocate(src);
+        iloc.load_var(src_reg_no, src);
+    }
+
+    // 分配结果寄存器
+    int32_t result_reg_no = result->getRegId();
+    if (result_reg_no == -1) {
+        result_reg_no = simpleRegisterAllocator.Allocate(result);
+    }
+
+    // rsb rd, rn, #0 => rd = 0 - rn
+    iloc.inst("rsb", 
+              PlatformArm32::regName[result_reg_no], 
+              PlatformArm32::regName[src_reg_no], 
+              "#0");
+
+    // 若结果需保存到内存
+    if (result->getRegId() == -1) {
+        iloc.store_var(result_reg_no, result, ARM32_TMP_REG_NO);
+    }
+
+    // 释放寄存器
+    simpleRegisterAllocator.free(src);
+    simpleRegisterAllocator.free(result);
+}
 cmake --build build --parallel
 
 ### 1.9.1. 调试运行

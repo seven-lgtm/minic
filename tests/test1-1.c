@@ -1,10 +1,8 @@
 int main()
 {
     int a;
-    int b;
-    int c,d;
-    a = -4;
-    b = 8;
-   
-    return a+b;
+
+    a = 0x6F / (-0x2F);
+
+    return a;
 }
