@@ -64,10 +64,7 @@ void BinaryInstruction::toString(std::string & str)
             // 取余指令，二元运算
             str = getIRName() + " = mod " + src1->getIRName() + "," + src2->getIRName();
             break;
-        case IRInstOperator::IRINST_OP_NEG_I:
-            // 取
-            str = getIRName() + " = neg " + src1->getIRName();
-            break;
+        
 
         default:
             // 未知指令

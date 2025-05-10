@@ -31,8 +31,24 @@ enum class BasicType : std::int8_t {
 ///
 /// @brief 词法与语法通信的无符号整数字面量属性
 ///
+/*
 typedef struct digit_int_attr {
     uint32_t val;   // 整数值
+    int64_t lineno; // 行号
+} digit_int_attr;
+*/
+
+// 新增进制类型枚举
+enum class IntBase : std::int8_t {
+    DEC, // 十进制
+    OCT, // 八进制
+    HEX  // 十六进制
+};
+
+// 修改后的整数字面量属性
+typedef struct digit_int_attr {
+    uint32_t val;   // 转换为十进制的值
+    IntBase base;   // 进制类型（新增）
     int64_t lineno; // 行号
 } digit_int_attr;
 
@@ -55,7 +71,12 @@ typedef struct var_id_attr {
 ///
 /// @brief 类型属性
 ///
+
 typedef struct type_attr {
     BasicType type; // 类型
     int64_t lineno; // 行号
 } type_attr;
+
+
+
+

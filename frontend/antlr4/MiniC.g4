@@ -44,17 +44,29 @@ statement:
 // 表达式文法 expr : AddExp 表达式目前只支持加法与减法运算
 expr: addExp;
 
-// 加减表达式
-addExp: unaryExp (addOp unaryExp)*;
 
-// 加减运算符
+// 加减表达式（最低优先级）
+addExp: mulExp (addOp mulExp)*;
 addOp: T_ADD | T_SUB;
 
-// 一元表达式
-unaryExp: primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN;
+// 乘除模表达式（中等优先级）
+mulExp: unaryExp (mulOp unaryExp)*;
+mulOp: T_MUL | T_DIV | T_MOD;
+
+
+// 一元表达式（最高优先级）
+unaryExp: 
+    (T_SUB)* (primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN)  // 支持连续负号
+    | primaryExp
+    | T_ID T_L_PAREN realParamList? T_R_PAREN;								 // 基础表达式
 
 // 基本表达式：括号表达式、整数、左值表达式
-primaryExp: T_L_PAREN expr T_R_PAREN | T_DIGIT | lVal;
+primaryExp:
+	T_L_PAREN expr T_R_PAREN
+	| lVal
+	| T_DECIMAL // 十进制
+	| T_OCTAL // 八进制
+	| T_HEX; // 十六进制
 
 // 实参列表
 realParamList: expr (T_COMMA expr)*;
@@ -75,6 +87,9 @@ T_COMMA: ',';
 
 T_ADD: '+';
 T_SUB: '-';
+T_MOD: '%';
+T_MUL: '*';
+T_DIV: '/';
 
 // 要注意关键字同样也属于T_ID，因此必须放在T_ID的前面，否则会识别成T_ID
 T_RETURN: 'return';
@@ -82,7 +97,10 @@ T_INT: 'int';
 T_VOID: 'void';
 
 T_ID: [a-zA-Z_][a-zA-Z0-9_]*;
-T_DIGIT: '0' | [1-9][0-9]*;
+
+T_DECIMAL: '0' | [1-9][0-9]*; // 十进制（0 或非零开头）
+T_OCTAL: '0' [0-7]+; // 八进制（以0开头，后跟0-7）
+T_HEX: '0' [xX] [0-9a-fA-F]+; // 十六进制（0x或0X开头）
 
 /* 空白符丢弃 */
 WS: [ \r\n\t]+ -> skip;

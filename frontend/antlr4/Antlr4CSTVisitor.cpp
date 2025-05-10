@@ -221,38 +221,22 @@ std::any MiniCCSTVisitor::visitBlockStatement(MiniCParser::BlockStatementContext
 
 std::any MiniCCSTVisitor::visitAddExp(MiniCParser::AddExpContext * ctx)
 {
-    // 识别的文法产生式：addExp : unaryExp (addOp unaryExp)*;
-
     if (ctx->addOp().empty()) {
-
-        // 没有addOp运算符，则说明闭包识别为0，只识别了第一个非终结符unaryExp
-        return visitUnaryExp(ctx->unaryExp()[0]);
+        // 直接返回第一个mulExp（假设只有一个）
+        return visitMulExp(ctx->mulExp()[0]);
     }
 
     ast_node *left, *right;
+    auto ops = ctx->addOp();
 
-    // 存在addOp运算符，自
-    auto opsCtxVec = ctx->addOp();
-
-    // 有操作符，肯定会进循环，使得right设置正确的值
-    for (int k = 0; k < (int) opsCtxVec.size(); k++) {
-
-        // 获取运算符
-        ast_operator_type op = std::any_cast<ast_operator_type>(visitAddOp(opsCtxVec[k]));
-
-        if (k == 0) {
-
-            // 左操作数
-            left = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()[k]));
+    for (size_t i = 0; i < ops.size(); i++) { // 改为size_t
+        ast_operator_type op = std::any_cast<ast_operator_type>(visitAddOp(ops[i]));
+        if (i == 0) {
+            left = std::any_cast<ast_node *>(visitMulExp(ctx->mulExp()[i]));
         }
-
-        // 右操作数
-        right = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()[k + 1]));
-
-        // 新建结点作为下一个运算符的右操作符
+        right = std::any_cast<ast_node *>(visitMulExp(ctx->mulExp()[i + 1]));
         left = ast_node::New(op, left, right, nullptr);
     }
-
     return left;
 }
 
@@ -269,29 +253,59 @@ std::any MiniCCSTVisitor::visitAddOp(MiniCParser::AddOpContext * ctx)
     }
 }
 
+// 新增方法：处理乘除模表达式
+std::any MiniCCSTVisitor::visitMulExp(MiniCParser::MulExpContext * ctx)
+{
+    if (ctx->mulOp().empty()) {
+        return visitUnaryExp(ctx->unaryExp()[0]);
+    }
+
+    ast_node *left, *right;
+    auto ops = ctx->mulOp();
+
+    for (size_t i = 0; i < ops.size(); i++) {
+        ast_operator_type op = std::any_cast<ast_operator_type>(visitMulOp(ops[i]));
+        if (i == 0) {
+            left = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()[i]));
+        }
+        right = std::any_cast<ast_node *>(visitUnaryExp(ctx->unaryExp()[i + 1]));
+        left = ast_node::New(op, left, right, nullptr);
+    }
+    return left;
+}
+// 处理乘除模操作符类型
+std::any MiniCCSTVisitor::visitMulOp(MiniCParser::MulOpContext * ctx)
+{
+    if (ctx->T_MUL())
+        return ast_operator_type::AST_OP_MUL;
+    else if (ctx->T_DIV())
+        return ast_operator_type::AST_OP_DIV;
+    else
+        return ast_operator_type::AST_OP_MOD; // T_MOD
+}
+
+
 std::any MiniCCSTVisitor::visitUnaryExp(MiniCParser::UnaryExpContext * ctx)
 {
-    // 识别文法产生式：unaryExp: primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN;
-
     if (ctx->primaryExp()) {
-        // 普通表达式
-        return visitPrimaryExp(ctx->primaryExp());
+        // 处理基础表达式
+        ast_node * primary = std::any_cast<ast_node *>(visitPrimaryExp(ctx->primaryExp()));
+
+        // 处理前置的负号
+        for (size_t i = 0; i < ctx->T_SUB().size(); i++) {
+            primary = ast_node::New(ast_operator_type::AST_OP_NEG, primary, nullptr, nullptr);
+        }
+        return primary;
+
     } else if (ctx->T_ID()) {
-
-        // 创建函数调用名终结符节点
+        // 处理函数调用
         ast_node * funcname_node = ast_node::New(ctx->T_ID()->getText(), (int64_t) ctx->T_ID()->getSymbol()->getLine());
-
-        // 实参列表
         ast_node * paramListNode = nullptr;
-
-        // 函数调用
         if (ctx->realParamList()) {
-            // 有参数
             paramListNode = std::any_cast<ast_node *>(visitRealParamList(ctx->realParamList()));
         }
-
-        // 创建函数调用节点，其孩子为被调用函数名和实参，
         return create_func_call(funcname_node, paramListNode);
+
     } else {
         return nullptr;
     }
@@ -299,24 +313,35 @@ std::any MiniCCSTVisitor::visitUnaryExp(MiniCParser::UnaryExpContext * ctx)
 
 std::any MiniCCSTVisitor::visitPrimaryExp(MiniCParser::PrimaryExpContext * ctx)
 {
-    // 识别文法产生式 primaryExp: T_L_PAREN expr T_R_PAREN | T_DIGIT | lVal;
-
     ast_node * node = nullptr;
+    int64_t lineNo;
 
-    if (ctx->T_DIGIT()) {
-        // 无符号整型字面量
-        // 识别 primaryExp: T_DIGIT
+    if (ctx->T_DECIMAL()) {
+        // 十进制（直接解析）
+        std::string text = ctx->T_DECIMAL()->getText();
+        uint32_t val = stoul(text, nullptr, 10);
+        lineNo = ctx->T_DECIMAL()->getSymbol()->getLine();
+        node = ast_node::New(digit_int_attr{val, IntBase::DEC, lineNo});
 
-        uint32_t val = (uint32_t) stoull(ctx->T_DIGIT()->getText());
-        int64_t lineNo = (int64_t) ctx->T_DIGIT()->getSymbol()->getLine();
-        node = ast_node::New(digit_int_attr{val, lineNo});
+    } else if (ctx->T_OCTAL()) {
+        // 八进制（去掉开头的0，按8进制解析）
+        std::string text = ctx->T_OCTAL()->getText().substr(1);
+        uint32_t val = stoul(text, nullptr, 8);
+        lineNo = ctx->T_OCTAL()->getSymbol()->getLine();
+        node = ast_node::New(digit_int_attr{val, IntBase::OCT, lineNo});
+
+    } else if (ctx->T_HEX()) {
+        // 十六进制（去掉0x/0X，按16进制解析）
+        std::string text = ctx->T_HEX()->getText().substr(2);
+        uint32_t val = stoul(text, nullptr, 16);
+        lineNo = ctx->T_HEX()->getSymbol()->getLine();
+        node = ast_node::New(digit_int_attr{val, IntBase::HEX, lineNo});
+
     } else if (ctx->lVal()) {
-        // 具有左值的表达式
-        // 识别 primaryExp: lVal
+        // 左值（变量名）
         node = std::any_cast<ast_node *>(visitLVal(ctx->lVal()));
     } else if (ctx->expr()) {
-        // 带有括号的表达式
-        // primaryExp: T_L_PAREN expr T_R_PAREN
+        // 括号表达式
         node = std::any_cast<ast_node *>(visitExpr(ctx->expr()));
     }
 

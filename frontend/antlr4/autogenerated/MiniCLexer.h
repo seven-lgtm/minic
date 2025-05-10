@@ -1,5 +1,5 @@
 
-// Generated from MiniC.g4 by ANTLR 4.12.0
+// Generated from /home/code/exp03-minic-basic/exp03-minic-basic/exp04-minic-expr/frontend/antlr4/MiniC.g4 by ANTLR 4.12.0
 
 #pragma once
 
@@ -13,8 +13,9 @@ class  MiniCLexer : public antlr4::Lexer {
 public:
   enum {
     T_L_PAREN = 1, T_R_PAREN = 2, T_SEMICOLON = 3, T_L_BRACE = 4, T_R_BRACE = 5, 
-    T_ASSIGN = 6, T_COMMA = 7, T_ADD = 8, T_SUB = 9, T_RETURN = 10, T_INT = 11, 
-    T_VOID = 12, T_ID = 13, T_DIGIT = 14, WS = 15
+    T_ASSIGN = 6, T_COMMA = 7, T_ADD = 8, T_SUB = 9, T_MOD = 10, T_MUL = 11, 
+    T_DIV = 12, T_RETURN = 13, T_INT = 14, T_VOID = 15, T_ID = 16, T_DECIMAL = 17, 
+    T_OCTAL = 18, T_HEX = 19, WS = 20
   };
 
   explicit MiniCLexer(antlr4::CharStream *input);
