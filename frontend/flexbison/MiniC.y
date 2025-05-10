@@ -53,7 +53,7 @@ void yyerror(char * msg);
 %token T_SEMICOLON T_L_PAREN T_R_PAREN T_L_BRACE T_R_BRACE
 %token T_COMMA
 
-// 运算符
+// 运算符  一词一类 不需要赋予语义属性
 %token T_ASSIGN T_SUB T_ADD T_MUL T_DIV T_MOD
 
 // 非终结符
@@ -73,7 +73,7 @@ void yyerror(char * msg);
 %type <op_class> AddOp MulOp
 
  
-
+// 声明操作符的结合行以及优先级
 %left T_ADD T_SUB          // 加减（低优先级）
 %left T_MUL T_DIV T_MOD    // 乘除取模（高优先级）
 %right UMINUS           // 单目负号（最高优先级）

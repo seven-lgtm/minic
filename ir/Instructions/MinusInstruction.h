@@ -1,25 +1,14 @@
 ///
-/// @file BinaryInstruction.h
-/// @brief 二元操作指令，如加和减
+/// @file MinusInstruction.h
+/// @brief 一元操作指令，如取负
 ///
-/// @author zenglj (zenglj@live.com)
-/// @version 1.0
-/// @date 2024-09-29
-///
-/// @copyright Copyright (c) 2024
-///
-/// @par 修改日志:
-/// <table>
-/// <tr><th>Date       <th>Version <th>Author  <th>Description
-/// <tr><td>2024-09-29 <td>1.0     <td>zenglj  <td>新建
-/// </table>
-///
+
 #pragma once
 
 #include "Instruction.h"
 
 ///
-/// @brief 二元运算指令
+/// @brief 一元运算指令  CMakeLists.txt记得加入该文件cpp/h
 ///
 class MinusInstruction : public Instruction {
 
@@ -27,7 +16,7 @@ public:
     /// @brief 构造函数
     /// @param _op 操作符
     /// @param _result 结果操作数
-    /// @param _srcVal 源操作数1
+    /// @param _srcVal 源操作数
     
     MinusInstruction(Function * _func, IRInstOperator _op, Value * _srcVal, Type * _type);
 
