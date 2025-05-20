@@ -640,10 +640,14 @@ void InstSelectorArm32::translate_two_relation(Instruction * inst, string mov1,s
             iloc.load_var(condReg, cond);
         }
 
-        // 2. 生成条件跳转指令
-        iloc.inst("cmp", PlatformArm32::regName[condReg], "#1"); // 比较是否为真
-        iloc.inst("beq", brInst->getTrueLabel()->getName());     // 真则跳转trueLabel
-        iloc.inst("bne", brInst->getFalseLabel()->getName());      // 否则跳转falseLabel
+        // 2. 生成条件跳转指令 和0进行比较 不要和1比较 例如：-10 就会出错  
+        //iloc.inst("cmp", PlatformArm32::regName[condReg], "#1"); // 比较是否为真
+        //iloc.inst("beq", brInst->getTrueLabel()->getName());     // 真则跳转trueLabel
+        //iloc.inst("bne", brInst->getFalseLabel()->getName());      // 否则跳转falseLabel
+
+        iloc.inst("cmp", PlatformArm32::regName[condReg], "#0"); // 比较是否为非零
+        iloc.inst("bne", brInst->getTrueLabel()->getName());     // 非零跳转至trueLabel
+        iloc.inst("b", brInst->getFalseLabel()->getName());      // 否则跳转至falseLabel
 
         // 释放寄存器
         simpleRegisterAllocator.free(cond);

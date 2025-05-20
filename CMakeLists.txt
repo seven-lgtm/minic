@@ -406,7 +406,8 @@ set(CPACK_SOURCE_IGNORE_FILES
 	"/.vscode/;" # vscode
 	"/.cache/;" # cache
 	"/.commonclasstestcases/;" #IRcompiler tool
-	"/.sh/;" #忽略写的脚本文件
+	"/*.sh/;" #忽略写的脚本文件
+	"/.IRcompiler/;"
 )
 
 

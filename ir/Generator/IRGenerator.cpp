@@ -1129,8 +1129,8 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
 
         cond_node->trueLabel = trueLabel;
         cond_node->falseLabel = falseLabel; //用于逻辑运算
-        node->trueLabel = trueLabel;
-        node->falseLabel = falseLabel;
+        //node->trueLabel = trueLabel;
+        //node->falseLabel = falseLabel;
 	
 
         // 1. 生成条件表达式IR
@@ -1139,8 +1139,13 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
             return false;
         node->blockInsts.addInst(cond_val_node->blockInsts);//添加表达式的IR
 
+        node->trueLabel =cond_node->trueLabel;
+        node->falseLabel = cond_node->falseLabel;
+        // 这里为什么这样呢 参考：if(!(a<b && b<0)) 这里在！取非节点 交换后truelabel 和falselabel 之后
+        // 还要传上去，把父亲节点的truelabel 和falselabel 也交换
+
         //2. 有条件跳转指令
-        node->blockInsts.addInst(new BranchInstruction(currentFunc, cond_val_node->val, trueLabel, falseLabel));
+        node->blockInsts.addInst(new BranchInstruction(currentFunc, cond_val_node->val, node->trueLabel, node->falseLabel));
 
         // 3. 插入trueLabel，并输出then语句的ir
         node->blockInsts.addInst(trueLabel);
@@ -1291,6 +1296,7 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         if (!right_val_node)
             return false;
         node->blockInsts.addInst(right_val_node->blockInsts); //添加右边表达式的IR
+		//node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, shortCircuitLabel, node->falseLabel));
 
         node->val = right_val_node->val; //结果等于right_val_node->val
 
@@ -1353,6 +1359,9 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         // 反转父节点的真/假出口标签
         child->trueLabel = node->falseLabel; // 子表达式为真时，跳转到父节点的falseLabel
         child->falseLabel = node->trueLabel; // 子表达式为假时，跳转到父节点的trueLabel
+
+        node->falseLabel = child->falseLabel ;
+        node->trueLabel = child->trueLabel;
 
         // 生成子表达式的代码
         ast_node * child_val_node = ir_visit_ast_node(child);
