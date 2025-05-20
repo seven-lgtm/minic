@@ -20,6 +20,8 @@
 
 #include "AST.h"
 #include "Module.h"
+#include "LabelInstruction.h"
+#include<stack>
 
 /// @brief AST遍历产生线性IR类
 class IRGenerator {
@@ -72,10 +74,42 @@ protected:
     bool ir_mod(ast_node * node);
     bool ir_neg(ast_node * node);
 
+    /// @brief 关系运算 < <= > >= == != AST节点翻译成线性中间IR
+    /// @param node AST节点
+    /// @return 翻译是否成功，true：成功，false：失败
+    bool ir_lt(ast_node * node);
+    bool ir_le(ast_node * node);
+    bool ir_gt(ast_node * node);
+    bool ir_ge(ast_node * node);
+    bool ir_eq(ast_node * node);
+    bool ir_ne(ast_node * node);
+
+    /// @brief 逻辑运算  && || ! AST节点翻译成线性中间IR
+    /// @param node AST节点
+    /// @return 翻译是否成功，true：成功，false：失败
+    bool ir_and(ast_node * node);
+    bool ir_or(ast_node * node);
+    bool ir_not(ast_node * node);
+   
+
     /// @brief 赋值AST节点翻译成线性中间IR
     /// @param node AST节点
     /// @return 翻译是否成功，true：成功，false：失败
     bool ir_assign(ast_node * node);
+
+    /// @brief if/ifelse AST节点翻译成线性中间IR
+    /// @param node AST节点
+    /// @return 翻译是否成功，true：成功，false：失败
+    bool ir_if(ast_node * node);
+    bool ir_if_else(ast_node * node);
+    bool generate_conditional_branch(ast_node * node, bool hasElse);
+
+    /// @brief while break continue AST节点翻译成线性中间IR
+    /// @param node AST节点
+    /// @return 翻译是否成功，true：成功，false：失败
+    bool ir_while(ast_node * node);
+    bool ir_break(ast_node * node);
+    bool ir_continue(ast_node * node);
 
     /// @brief return节点翻译成线性中间IR
     /// @param node AST节点
@@ -134,4 +168,6 @@ private:
 
     /// @brief 符号表:模块
     Module * module;
+
+    std::stack<std::pair<LabelInstruction *, LabelInstruction *>> loopStack; // (exitLabel, condLabel)
 };

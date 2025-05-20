@@ -14,7 +14,6 @@
 /// </table>
 ///
 #include "VoidType.h"
-
 #include "LabelInstruction.h"
 
 ///

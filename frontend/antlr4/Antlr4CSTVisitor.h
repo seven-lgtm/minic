@@ -21,8 +21,16 @@
 
 /// @brief 遍历具体语法树产生抽象语法树
 class MiniCCSTVisitor : public MiniCBaseVisitor {
+//private:
+    //int labelCounter = 0; // 标签计数器
 
 public:
+/*
+    int generateLabel()
+    {
+        return labelCounter++; // 返回当前值后递增
+    }
+*/
     /// @brief 构造函数
     MiniCCSTVisitor();
 
@@ -72,11 +80,6 @@ protected:
     /// @return AST的节点
     std::any visitReturnStatement(MiniCParser::ReturnStatementContext * ctx) override;
 
-    /// @brief 非终结运算符expr的遍历
-    /// @param ctx CST上下文
-    /// @return AST的节点
-    std::any visitExpr(MiniCParser::ExprContext * ctx) override;
-
     ///
     /// @brief 内部产生的非终结符assignStatement的分析
     /// @param ctx CST上下文
@@ -90,6 +93,64 @@ protected:
     /// @return std::any AST的节点
     ///
     std::any visitBlockStatement(MiniCParser::BlockStatementContext * ctx) override;
+
+    ///
+    /// @brief 内部产生的非终结符ifStatement的分析
+    /// @param ctx CST上下文
+    /// @return std::any AST的节点
+    ///
+    std::any visitIfStatement(MiniCParser::IfStatementContext * ctx) override;
+
+    ///
+    /// @brief 内部产生的非终结符whileStatement的分析
+    /// @param ctx CST上下文
+    /// @return std::any AST的节点
+    ///
+    std::any visitWhileStatement(MiniCParser::WhileStatementContext * ctx) override;
+
+    ///
+    /// @brief 内部产生的非终结符breakStatement的分析
+    /// @param ctx CST上下文
+    /// @return std::any AST的节点
+    ///
+    std::any visitBreakStatement(MiniCParser::BreakStatementContext * ctx) override;
+
+    ///
+    /// @brief 内部产生的非终结符continueStatement的分析
+    /// @param ctx CST上下文
+    /// @return std::any AST的节点
+    ///
+    std::any visitContinueStatement(MiniCParser::ContinueStatementContext * ctx) override;
+
+    /// @brief 非终结运算符expr的遍历
+    /// @param ctx CST上下文
+    /// @return AST的节点
+    std::any visitExpr(MiniCParser::ExprContext * ctx) override;
+
+    /// @brief 非终结运算符logicalOrexpr的遍历
+    /// @param ctx CST上下文
+    /// @return AST的节点
+    std::any visitLogicalOrExp(MiniCParser::LogicalOrExpContext * ctx) override;
+
+    /// @brief 非终结运算符logicalAndExp的遍历
+    /// @param ctx CST上下文
+    /// @return AST的节点
+    std::any visitLogicalAndExp(MiniCParser::LogicalAndExpContext * ctx) override;
+
+    ///
+    /// @brief 非终结符relExp的分析
+    /// @param ctx CST上下文
+    /// @return std::any AST的节点
+    ///
+    std::any visitRelExp(MiniCParser::RelExpContext * ctx) override;
+
+    ///
+    /// @brief 非终结符relOp的分析
+    /// @param ctx CST上下文
+    /// @return std::any AST的节点
+    ///
+
+    std::any visitRelOp(MiniCParser::RelOpContext * ctx) override;
 
     ///
     /// @brief 非终结符AddExp的分析
@@ -118,14 +179,13 @@ protected:
     /// @return std::any 类型
     ///
     std::any visitMulOp(MiniCParser::MulOpContext * ctx) override;
-    
-	///
+
+    ///
     /// @brief 非终结符unaryExp的分析
     /// @param ctx CST上下文
     /// @return std::any AST的节点
     ///
     std::any visitUnaryExp(MiniCParser::UnaryExpContext * ctx) override;
-    
 
     ///
     /// @brief 非终结符PrimaryExp的分析

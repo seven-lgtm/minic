@@ -4,3 +4,4 @@
 arm-linux-gnueabihf-gcc -static -g -o tests/test1-1 tests/test1-1.s
 qemu-arm-static tests/test1-1
 echo $?
+

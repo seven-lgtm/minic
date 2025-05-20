@@ -34,15 +34,28 @@ basicType: T_INT;
 // 变量定义
 varDef: T_ID;
 
-// 目前语句支持return和赋值语句
+//  statement
 statement:
 	T_RETURN expr T_SEMICOLON			# returnStatement
 	| lVal T_ASSIGN expr T_SEMICOLON	# assignStatement
 	| block								# blockStatement
-	| expr? T_SEMICOLON					# expressionStatement;
+	| expr? T_SEMICOLON					# expressionStatement
+	| T_IF T_L_PAREN expr T_R_PAREN statement (T_ELSE statement)?   # ifStatement    
+	| T_WHILE T_L_PAREN expr T_R_PAREN statement    # whileStatement
+	| T_BREAK  T_SEMICOLON        # breakStatement
+	| T_CONTINUE T_SEMICOLON      #continueStatement;
 
-// 表达式文法 expr : AddExp 表达式目前只支持加法与减法运算
-expr: addExp;
+
+// 优先级： 逻辑非  乘除取模 加减 关系运算 逻辑与 逻辑或
+// 表达式文法 expr 
+expr: logicalOrExp;
+logicalOrExp: logicalAndExp (T_OR logicalAndExp)*;
+logicalAndExp: relExp (T_AND relExp)*;
+
+//关系表达式（优先级低于加减，高于赋值） 
+relExp: addExp (relOp addExp)*;
+
+relOp : T_LT | T_GT|  T_LE | T_GE | T_EQ  | T_NE;
 
 
 // 加减表达式（最低优先级）
@@ -53,12 +66,18 @@ addOp: T_ADD | T_SUB;
 mulExp: unaryExp (mulOp unaryExp)*;
 mulOp: T_MUL | T_DIV | T_MOD;
 
-
 // 一元表达式（最高优先级）
+/* 
 unaryExp: 
-    (T_SUB)* (primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN)  // 支持连续负号
-    | primaryExp
-    | T_ID T_L_PAREN realParamList? T_R_PAREN;								 // 基础表达式
+	(T_SUB | T_NOT)* (primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN)  // 支持连续负号
+	| primaryExp // 基础表达式
+	| T_ID T_L_PAREN realParamList? T_R_PAREN;								 // 函数调用
+*/
+
+unaryExp:
+	(T_SUB | T_NOT)* primaryExp // 支持连续负号 取非
+	| primaryExp // 基础表达式
+	| T_ID T_L_PAREN realParamList? T_R_PAREN; // 函数调用
 
 // 基本表达式：括号表达式、整数、左值表达式
 primaryExp:
@@ -91,16 +110,43 @@ T_MOD: '%';
 T_MUL: '*';
 T_DIV: '/';
 
+//关系运算
+T_LT: '<';  //less than 
+T_GT: '>';
+T_LE: '<=';  
+T_GE: '>=';
+T_EQ: '==';
+T_NE: '!=';
+
+//逻辑运算
+T_AND:'&&';
+T_OR: '||';
+T_NOT:'!';
+
+
+
+
+
 // 要注意关键字同样也属于T_ID，因此必须放在T_ID的前面，否则会识别成T_ID
 T_RETURN: 'return';
 T_INT: 'int';
 T_VOID: 'void';
+T_IF: 'if';
+T_ELSE: 'else';
+T_BREAK:'break';
+T_CONTINUE:'continue';
+T_WHILE:'while';
 
 T_ID: [a-zA-Z_][a-zA-Z0-9_]*;
 
 T_DECIMAL: '0' | [1-9][0-9]*; // 十进制（0 或非零开头）
 T_OCTAL: '0' [0-7]+; // 八进制（以0开头，后跟0-7）
 T_HEX: '0' [xX] [0-9a-fA-F]+; // 十六进制（0x或0X开头）
+
+
+// 行注释和块注释（跳过）
+LINE_COMMENT: '//' ~[\r\n]* -> skip;
+BLOCK_COMMENT: '/*' .*? '*/' -> skip;
 
 /* 空白符丢弃 */
 WS: [ \r\n\t]+ -> skip;

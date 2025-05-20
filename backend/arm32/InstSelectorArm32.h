@@ -97,6 +97,26 @@ protected:
     /// @param operator_name 操作码
     void translate_two_operator(Instruction * inst, string operator_name);
 
+    /// @brief 分支指令翻译成ARM32汇编
+    /// @param inst IR指令
+    /// @param operator_name 操作码
+    void translate_branch(Instruction * inst);
+
+        /// @brief 关系元算指令翻译成ARM32汇编
+        /// @param inst IR指令
+    void translate_lt_int32(Instruction * inst);
+    void translate_le_int32(Instruction * inst);
+    void translate_gt_int32(Instruction * inst);
+    void translate_ge_int32(Instruction * inst);
+    void translate_eq_int32(Instruction * inst);
+    void translate_ne_int32(Instruction * inst);
+    
+	/// @brief 关系运算指令翻译成ARM32汇编
+    /// @param inst IR指令
+    /// @param mov1 moveq
+    /// @param mov2 movne
+    void translate_two_relation(Instruction * inst, string mov1,string mov2);
+
     /// @brief 函数调用指令翻译成ARM32汇编
     /// @param inst IR指令
     void translate_call(Instruction * inst);

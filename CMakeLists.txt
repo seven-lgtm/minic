@@ -162,6 +162,8 @@ set(IR_SRCS
 	ir/Instructions/BinaryInstruction.h
 	ir/Instructions/MinusInstruction.cpp
 	ir/Instructions/MinusInstruction.h
+	ir/Instructions/BranchInstruction.cpp
+	ir/Instructions/BranchInstruction.h
 	ir/Instructions/EntryInstruction.cpp
 	ir/Instructions/EntryInstruction.h
 	ir/Instructions/ExitInstruction.cpp
@@ -382,8 +384,10 @@ add_custom_command(TARGET ${PROJECT_NAME}
 )
 
 # 源代码打包
-set(CPACK_SOURCE_GENERATOR "TGZ")
-set(CPACK_SOURCE_PACKAGE_FILE_NAME "${PROJECT_NAME}-${PROJECT_VERSION}-src")
+#set(CPACK_SOURCE_GENERATOR "TGZ")
+#set(CPACK_SOURCE_PACKAGE_FILE_NAME "${PROJECT_NAME}-${PROJECT_VERSION}-src")
+
+set(CPACK_SOURCE_GENERATOR "ZIP")
 
 # 忽略不需要源代码目录或文件
 set(CPACK_SOURCE_IGNORE_FILES
@@ -395,7 +399,17 @@ set(CPACK_SOURCE_IGNORE_FILES
 	"/frontend/antlr4/.antlr/;" # antlr自动产生的目录
 	"/.history/;" # 本地历史文件
 	"/tests/;" # 测试文件夹
+	"/thirdparty/;" # antlr
+	"/tools/;" # tools
+	"/cmake/;" # cmake
+	"/.vs/;" # visual studio
+	"/.vscode/;" # vscode
+	"/.cache/;" # cache
+	"/.commonclasstestcases/;" #IRcompiler tool
+	"/.sh/;" #忽略写的脚本文件
 )
+
+
 
 # 二进制打包
 set(CPACK_GENERATOR "TGZ")
