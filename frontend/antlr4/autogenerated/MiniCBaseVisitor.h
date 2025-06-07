@@ -23,6 +23,18 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitReturnType(MiniCParser::ReturnTypeContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitParamList(MiniCParser::ParamListContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitParam(MiniCParser::ParamContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitBlock(MiniCParser::BlockContext *ctx) override {
     return visitChildren(ctx);
   }
@@ -40,10 +52,6 @@ public:
   }
 
   virtual std::any visitBasicType(MiniCParser::BasicTypeContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
-  virtual std::any visitVarDef(MiniCParser::VarDefContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -124,6 +132,10 @@ public:
   }
 
   virtual std::any visitRealParamList(MiniCParser::RealParamListContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitVarDef(MiniCParser::VarDefContext *ctx) override {
     return visitChildren(ctx);
   }
 

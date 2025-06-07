@@ -32,6 +32,11 @@ class ScopeStack;
 class Module {
 
 public:
+    /// @brief 获取作用域栈指针
+    ScopeStack * getScopeStack()
+    {
+        return scopeStack;
+    }
     ///
     /// @brief 构造函数
     /// @param name  模块名
@@ -133,6 +138,10 @@ public:
     /// @brief 对IR指令中没有名字的全部命名
     ///
     void renameIR();
+
+    /// @brief 获取当前作用域层级
+    /// @return 当前作用域层级
+    int getScopeLevel();
 
 protected:
     /// @brief 根据整数值获取当前符号

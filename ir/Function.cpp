@@ -33,6 +33,7 @@ Function::Function(std::string _name, FunctionType * _type, bool _builtin)
     setAlignment(1);
 }
 
+
 ///
 /// @brief 析构函数
 /// @brief 释放函数占用的内存和IR指令代码
@@ -55,6 +56,7 @@ std::vector<FormalParam *> & Function::getParams()
 {
     return params;
 }
+
 
 /// @brief 获取函数内的IR指令代码
 /// @return IR指令代码
@@ -99,8 +101,9 @@ void Function::toString(std::string & str)
     str += ")\n";
 
     str += "{\n";
+    // define i32 @func(i32 %t0) {
 
-    // 输出局部变量的名字与IR名字
+    //  输出局部变量的名字与IR名字
     for (auto & var: this->varsVector) {
 
         // 局部变量和临时变量需要输出declare语句

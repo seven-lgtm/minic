@@ -21,16 +21,8 @@
 
 /// @brief 遍历具体语法树产生抽象语法树
 class MiniCCSTVisitor : public MiniCBaseVisitor {
-//private:
-    //int labelCounter = 0; // 标签计数器
 
 public:
-/*
-    int generateLabel()
-    {
-        return labelCounter++; // 返回当前值后递增
-    }
-*/
     /// @brief 构造函数
     MiniCCSTVisitor();
 
@@ -59,6 +51,21 @@ protected:
     /// @param ctx CST上下文
     /// @return AST的节点
     std::any visitBlock(MiniCParser::BlockContext * ctx) override;
+
+    /// @brief 非终结运算符returnType（函数返回值） 的遍历
+    /// @param ctx CST上下文
+    /// @return AST的节点
+    std::any visitReturnType(MiniCParser::ReturnTypeContext * ctx) override;
+
+    /// @brief 非终结运算符paramList（函数参数列表） 的遍历
+    /// @param ctx CST上下文
+    /// @return AST的节点
+    std::any visitParamList(MiniCParser::ParamListContext * ctx) override;
+
+    /// @brief 非终结运算符param（单个函数参数） 的遍历
+    /// @param ctx CST上下文
+    /// @return AST的节点
+    std::any visitParam(MiniCParser::ParamContext * ctx) override;
 
     /// @brief 非终结运算符blockItemList的遍历
     /// @param ctx CST上下文

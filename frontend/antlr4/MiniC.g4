@@ -13,8 +13,18 @@ grammar MiniC;
 // 源文件编译单元定义
 compileUnit: (funcDef | varDecl)* EOF;
 
-// 函数定义，目前不支持形参，也不支持返回void类型等
-funcDef: T_INT T_ID T_L_PAREN T_R_PAREN block;
+// 函数定义，支持形参，支持返回void类型  int function(int a, int b) {}
+funcDef: returnType T_ID T_L_PAREN (paramList)?  T_R_PAREN block; 
+
+//函数返回值类型
+returnType: T_INT
+           | T_VOID;  
+
+//函数参数 int a,int b
+paramList: param (T_COMMA param)*;
+ 
+ //  int a
+param: basicType T_ID;
 
 // 语句块看用作函数体，这里允许多个语句，并且不含任何语句
 block: T_L_BRACE blockItemList? T_R_BRACE;
@@ -25,18 +35,19 @@ blockItemList: blockItem+;
 // 每个Item可以是一个语句，或者变量声明语句
 blockItem: statement | varDecl;
 
-// 变量声明，目前不支持变量含有初值
-varDecl: basicType varDef (T_COMMA varDef)* T_SEMICOLON;
+// 变量声明，变量的初始化
+varDecl: basicType varDef (T_COMMA varDef)*  T_SEMICOLON;
 
 // 基本类型
 basicType: T_INT;
+       
 
 // 变量定义
-varDef: T_ID;
+//varDef: T_ID;
 
 //  statement
 statement:
-	T_RETURN expr T_SEMICOLON			# returnStatement
+	T_RETURN expr? T_SEMICOLON			# returnStatement   //允许函数返回值为空return;
 	| lVal T_ASSIGN expr T_SEMICOLON	# assignStatement
 	| block								# blockStatement
 	| expr? T_SEMICOLON					# expressionStatement
@@ -66,7 +77,7 @@ addOp: T_ADD | T_SUB;
 mulExp: unaryExp (mulOp unaryExp)*;
 mulOp: T_MUL | T_DIV | T_MOD;
 
-// 一元表达式（最高优先级）
+
 /* 
 unaryExp: 
 	(T_SUB | T_NOT)* (primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN)  // 支持连续负号
@@ -74,6 +85,7 @@ unaryExp:
 	| T_ID T_L_PAREN realParamList? T_R_PAREN;								 // 函数调用
 */
 
+// 一元表达式（最高优先级）
 unaryExp:
 	(T_SUB | T_NOT)* primaryExp // 支持连续负号 取非
 	| primaryExp // 基础表达式
@@ -89,6 +101,12 @@ primaryExp:
 
 // 实参列表
 realParamList: expr (T_COMMA expr)*;
+
+// 变量声明，支持变量的初始化
+varDef: T_ID (T_ASSIGN expr)?; // 添加初始化表达式支持
+//int a,b=3;
+//int a=6,n=9;
+// int a=3,b,c=90
 
 // 左值表达式
 lVal: T_ID;

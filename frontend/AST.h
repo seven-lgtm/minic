@@ -126,115 +126,115 @@ enum class ast_operator_type : int {
 ///
 class ast_node {
 public:
+
     LabelInstruction*  trueLabel; // 真出口标签
-    LabelInstruction*  falseLabel;  // 假出口标签
-                                  // int loopStartLabel = -1; // 循环入口标签（用于break/continue）
-                                  // int loopEndLabel = -1;   // 循环出口标签
+    LabelInstruction*  falseLabel;  // 假出口标签 用于逻辑运算的短路求值以及 跳转语句 if while break continue
 /*
-    // 翻转真/假标签（用于逻辑非）
-    void swapLabels()
-    {std::swap(trueLabel, falseLabel);}
-  */     
-	
-	
-	   /// @brief 节点类型
-        ast_operator_type node_type;
+    /// @brief 克隆当前节点（浅拷贝）
+    ast_node * clone()
+    {
+        return new ast_node(*this);
+    }
+    ast_node(const ast_node & other);*/
 
-        /// @brief 行号信息，主要针对叶子节点有用
-        int64_t line_no;
+    /// @brief 节点类型
+    ast_operator_type node_type;
 
-        /// @brief 节点值的类型，可用于函数返回值类型
-        Type * type;
+    /// @brief 行号信息，主要针对叶子节点有用
+    int64_t line_no;
 
-        /// @brief 无符号整数字面量值
-        uint32_t integer_val;
+    /// @brief 节点值的类型，可用于函数返回值类型
+    Type * type;
 
-        /// @brief float类型字面量值
-        float float_val;
+    /// @brief 无符号整数字面量值
+    uint32_t integer_val;
 
-        /// @brief 变量名，或者函数名
-        std::string name;
+    /// @brief float类型字面量值
+    float float_val;
 
-        /// @brief 父节点
-        ast_node * parent = nullptr;
+    /// @brief 变量名，或者函数名
+    std::string name;
 
-        /// @brief 孩子节点
-        std::vector<ast_node *> sons;
+    /// @brief 父节点
+    ast_node * parent = nullptr;
 
-        /// @brief 线性IR指令块，可包含多条IR指令，用于线性IR指令产生用
-        InterCode blockInsts;
+    /// @brief 孩子节点
+    std::vector<ast_node *> sons;
 
-        /// @brief 线性IR指令或者运行产生的Value，用于线性IR指令产生用
-        Value * val = nullptr;
+    /// @brief 线性IR指令块，可包含多条IR指令，用于线性IR指令产生用
+    InterCode blockInsts;
 
-        ///
-        /// @brief 在进入block等节点时是否要进行作用域管理。默认要做。
-        ///
-        bool needScope = true;
+    /// @brief 线性IR指令或者运行产生的Value，用于线性IR指令产生用
+    Value * val = nullptr;
 
-        /// @brief 创建指定节点类型的节点
-        /// @param _node_type 节点类型
-        ast_node(ast_operator_type _node_type, Type * _type = VoidType::getType(), int64_t _line_no = -1);
+    ///
+    /// @brief 在进入block等节点时是否要进行作用域管理。默认要做。
+    ///
+    bool needScope = true;
 
-        /// @brief 构造函数
-        /// @param _type 节点值的类型
-        ast_node(Type * _type);
+    /// @brief 创建指定节点类型的节点
+    /// @param _node_type 节点类型
+    ast_node(ast_operator_type _node_type, Type * _type = VoidType::getType(), int64_t _line_no = -1);
 
-        /// @brief 针对无符号整数字面量的构造函数
-        /// @param attr 无符号整数字面量
-        ast_node(digit_int_attr attr);
+    /// @brief 构造函数
+    /// @param _type 节点值的类型
+    ast_node(Type * _type);
 
-        /// @brief 针对标识符ID的叶子构造函数
-        /// @param attr 字符型标识符
-        ast_node(var_id_attr attr);
+    /// @brief 针对无符号整数字面量的构造函数
+    /// @param attr 无符号整数字面量
+    ast_node(digit_int_attr attr);
 
-        /// @brief 针对标识符ID的叶子构造函数
-        /// @param _id 标识符ID
-        /// @param _line_no 行号
-        ast_node(std::string id, int64_t _line_no);
+    /// @brief 针对标识符ID的叶子构造函数
+    /// @param attr 字符型标识符
+    ast_node(var_id_attr attr);
 
-        /// @brief 判断是否是叶子节点
-        /// @param type 节点类型
-        /// @return true：是叶子节点 false：内部节点
-        bool isLeafNode();
+    /// @brief 针对标识符ID的叶子构造函数
+    /// @param _id 标识符ID
+    /// @param _line_no 行号
+    ast_node(std::string id, int64_t _line_no);
 
-        /// @brief 向父节点插入一个节点
-        /// @param parent 父节点
-        /// @param node 节点
-        ast_node * insert_son_node(ast_node * node);
+    /// @brief 判断是否是叶子节点
+    /// @param type 节点类型
+    /// @return true：是叶子节点 false：内部节点
+    bool isLeafNode();
 
-        /// @brief 创建指定节点类型的节点，最后一个孩子节点必须指定为nullptr。
-        /// @param type 节点类型
-        /// @param  可变参数，最后一个孩子节点必须指定为nullptr。如果没有孩子，则指定为nullptr
-        /// @return 创建的节点
-        static ast_node * New(ast_operator_type type, ...);
+    /// @brief 向父节点插入一个节点
+    /// @param parent 父节点
+    /// @param node 节点
+    ast_node * insert_son_node(ast_node * node);
 
-        /// @brief 创建无符号整数的叶子节点
-        /// @param val 词法值
-        /// @param line_no 行号
-        static ast_node * New(digit_int_attr attr);
+    /// @brief 创建指定节点类型的节点，最后一个孩子节点必须指定为nullptr。
+    /// @param type 节点类型
+    /// @param  可变参数，最后一个孩子节点必须指定为nullptr。如果没有孩子，则指定为nullptr
+    /// @return 创建的节点
+    static ast_node * New(ast_operator_type type, ...);
 
-        /// @brief 创建标识符的叶子节点
-        /// @param val 词法值
-        /// @param line_no 行号
-        static ast_node * New(var_id_attr attr);
+    /// @brief 创建无符号整数的叶子节点
+    /// @param val 词法值
+    /// @param line_no 行号
+    static ast_node * New(digit_int_attr attr);
 
-        /// @brief 创建标识符的叶子节点
-        /// @param id 词法值
-        /// @param line_no 行号
-        static ast_node * New(std::string id, int64_t lineno);
+    /// @brief 创建标识符的叶子节点
+    /// @param val 词法值
+    /// @param line_no 行号
+    static ast_node * New(var_id_attr attr);
 
-        /// @brief 创建具备指定类型的节点
-        /// @param type 节点值类型
-        /// @param line_no 行号
-        /// @return 创建的节点
-        static ast_node * New(Type * type);
+    /// @brief 创建标识符的叶子节点
+    /// @param id 词法值
+    /// @param line_no 行号
+    static ast_node * New(std::string id, int64_t lineno);
 
-        ///
-        /// @brief 释放节点
-        /// @param node
-        ///
-        static void Delete(ast_node * node);
+    /// @brief 创建具备指定类型的节点
+    /// @param type 节点值类型
+    /// @param line_no 行号
+    /// @return 创建的节点
+    static ast_node * New(Type * type);
+
+    ///
+    /// @brief 释放节点
+    /// @param node
+    ///
+    static void Delete(ast_node * node);
     };
 
 /// @brief AST资源清理
