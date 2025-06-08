@@ -129,13 +129,6 @@ public:
 
     LabelInstruction*  trueLabel; // 真出口标签
     LabelInstruction*  falseLabel;  // 假出口标签 用于逻辑运算的短路求值以及 跳转语句 if while break continue
-/*
-    /// @brief 克隆当前节点（浅拷贝）
-    ast_node * clone()
-    {
-        return new ast_node(*this);
-    }
-    ast_node(const ast_node & other);*/
 
     /// @brief 节点类型
     ast_operator_type node_type;

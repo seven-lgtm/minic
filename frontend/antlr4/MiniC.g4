@@ -27,7 +27,8 @@ paramList: param (T_COMMA param)*;
 param: basicType T_ID;
 
 // 语句块看用作函数体，这里允许多个语句，并且不含任何语句
-block: T_L_BRACE blockItemList? T_R_BRACE;
+block:
+	T_L_BRACE blockItemList? T_R_BRACE; //已经支持空语句{} blockItemListke xuan
 
 // 每个ItemList可包含至少一个Item
 blockItemList: blockItem+;
@@ -50,7 +51,7 @@ statement:
 	T_RETURN expr? T_SEMICOLON			# returnStatement   //允许函数返回值为空return;
 	| lVal T_ASSIGN expr T_SEMICOLON	# assignStatement
 	| block								# blockStatement
-	| expr? T_SEMICOLON					# expressionStatement
+	| expr? T_SEMICOLON					# expressionStatement  //这里支持单独的分号expr可选
 	| T_IF T_L_PAREN expr T_R_PAREN statement (T_ELSE statement)?   # ifStatement    
 	| T_WHILE T_L_PAREN expr T_R_PAREN statement    # whileStatement
 	| T_BREAK  T_SEMICOLON        # breakStatement
@@ -59,6 +60,7 @@ statement:
 
 // 优先级： 逻辑非  乘除取模 加减 关系运算 逻辑与 逻辑或
 // 表达式文法 expr 
+
 expr: logicalOrExp;
 logicalOrExp: logicalAndExp (T_OR logicalAndExp)*;
 logicalAndExp: relExp (T_AND relExp)*;
@@ -87,9 +89,9 @@ unaryExp:
 
 // 一元表达式（最高优先级）
 unaryExp:
-	(T_SUB | T_NOT)* primaryExp // 支持连续负号 取非
+	(T_SUB | T_NOT)*  (primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN) // 支持连续负号 取非:对于primaryExp和函数调用
 	| primaryExp // 基础表达式
-	| T_ID T_L_PAREN realParamList? T_R_PAREN; // 函数调用
+	| T_ID T_L_PAREN realParamList? T_R_PAREN; // 函数调用 fun(i)
 
 // 基本表达式：括号表达式、整数、左值表达式
 primaryExp:

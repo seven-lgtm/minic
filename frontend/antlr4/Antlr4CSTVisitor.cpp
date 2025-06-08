@@ -156,9 +156,8 @@ std::any MiniCCSTVisitor::visitParam(MiniCParser::ParamContext * ctx)
 std::any MiniCCSTVisitor::visitBlock(MiniCParser::BlockContext * ctx)
 {
     // 识别的文法产生式：block : T_L_BRACE blockItemList? T_R_BRACE';
-    if (!ctx->blockItemList()) {
-        // 语句块没有语句
-
+    if (!ctx->blockItemList()) { 
+        // 语句块没有语句  {}
         // 为了方便创建一个空的Block节点
         return create_contain_node(ast_operator_type::AST_OP_BLOCK);
     }
@@ -198,8 +197,14 @@ std::any MiniCCSTVisitor::visitBlockItem(MiniCParser::BlockItemContext * ctx)
     // 识别的文法产生式：blockItem : statement | varDecl
     if (ctx->statement()) {
         // 语句识别
+     
+        return  visitStatement(ctx->statement());
+		
+		
+        // auto stmtNode = std::any_cast<ast_node *>(result);
+        // 空语句不加入AST
+       
 
-        return visitStatement(ctx->statement());
     } else if (ctx->varDecl()) {
         return visitVarDecl(ctx->varDecl());
     }
@@ -491,9 +496,15 @@ std::any MiniCCSTVisitor::visitMulOp(MiniCParser::MulOpContext * ctx)
         return ast_operator_type::AST_OP_MOD; // T_MOD
 }
 
-
+/// @brief 非终结运算符unaryExp中的遍历
+/// @param ctx CST上下文
 std::any MiniCCSTVisitor::visitUnaryExp(MiniCParser::UnaryExpContext * ctx)
 {
+	/*
+unaryExp:
+    (T_SUB | T_NOT)*  (primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN) // 支持连续负号 取非:对于primaryExp和函数调用
+	| primaryExp // 基础表达式
+	| T_ID T_L_PAREN realParamList? T_R_PAREN; // 函数调用 fun(i)*/
     if (ctx->primaryExp()) {
         // 处理基础表达式
         ast_node * node = std::any_cast<ast_node *>(visitPrimaryExp(ctx->primaryExp()));
@@ -502,22 +513,33 @@ std::any MiniCCSTVisitor::visitUnaryExp(MiniCParser::UnaryExpContext * ctx)
         for (size_t i = 0; i < ctx->T_SUB().size(); i++) {
             node = ast_node::New(ast_operator_type::AST_OP_NEG, node, nullptr, nullptr);
         }
-       
 
+        // 处理前置的负号 处理前置的取非
         for (size_t i = 0; i < ctx->T_NOT().size(); i++) {
             node = ast_node::New(ast_operator_type::AST_OP_NOT, node, nullptr, nullptr);
-           // node->swapLabels(); // 翻转真/假出口标签
         }
         return node;
 
-    } else if (ctx->T_ID()) {
+    } else if (ctx->T_ID()) {   //处理以前
         // 处理函数调用
+		ast_node * func_call= nullptr; //函数调用节点
         ast_node * funcname_node = ast_node::New(ctx->T_ID()->getText(), (int64_t) ctx->T_ID()->getSymbol()->getLine());
         ast_node * paramListNode = nullptr;
         if (ctx->realParamList()) {
             paramListNode = std::any_cast<ast_node *>(visitRealParamList(ctx->realParamList()));
         }
-        return create_func_call(funcname_node, paramListNode);
+        func_call = create_func_call(funcname_node, paramListNode);
+
+        // 处理前置的负号
+        for (size_t i = 0; i < ctx->T_SUB().size(); i++) {
+            func_call = ast_node::New(ast_operator_type::AST_OP_NEG, func_call, nullptr, nullptr);
+        }
+
+        //  处理前置的取非
+        for (size_t i = 0; i < ctx->T_NOT().size(); i++) {
+            func_call = ast_node::New(ast_operator_type::AST_OP_NOT, func_call, nullptr, nullptr);
+        }
+		return func_call;
 
     } else {
         return nullptr;
@@ -657,16 +679,15 @@ std::any MiniCCSTVisitor::visitRealParamList(MiniCParser::RealParamListContext *
 
 std::any MiniCCSTVisitor::visitExpressionStatement(MiniCParser::ExpressionStatementContext * ctx)
 {
-    // 识别文法产生式  expr ? T_SEMICOLON #expressionStatement;
+    // 识别文法产生式  expr ? T_SEMICOLON #expressionStatement; 
     if (ctx->expr()) {
         // 表达式语句
 
         // 遍历expr非终结符，创建表达式节点后返回
         return visitExpr(ctx->expr());
     } else {
-        // 空语句
-
+        // 只有分号
         // 直接返回空指针，需要再把语句加入到语句块时要注意判断，空语句不要加入
-        return nullptr;
+        return nullptr;  //当程序里面有单独的分号的处理
     }
 }

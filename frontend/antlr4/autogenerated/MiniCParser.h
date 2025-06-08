@@ -476,13 +476,13 @@ public:
     UnaryExpContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     PrimaryExpContext *primaryExp();
+    antlr4::tree::TerminalNode *T_ID();
+    antlr4::tree::TerminalNode *T_L_PAREN();
+    antlr4::tree::TerminalNode *T_R_PAREN();
     std::vector<antlr4::tree::TerminalNode *> T_SUB();
     antlr4::tree::TerminalNode* T_SUB(size_t i);
     std::vector<antlr4::tree::TerminalNode *> T_NOT();
     antlr4::tree::TerminalNode* T_NOT(size_t i);
-    antlr4::tree::TerminalNode *T_ID();
-    antlr4::tree::TerminalNode *T_L_PAREN();
-    antlr4::tree::TerminalNode *T_R_PAREN();
     RealParamListContext *realParamList();
 
 

@@ -187,10 +187,10 @@ bool IRGenerator::ir_compile_unit(ast_node * node)
                     // 初始化值必须是常量
                     if (dynamic_cast<ConstInt *>(init_node->val)) {
                         initValue = init_node->val;
-                    } else {
+                    } /*else {
                         minic_log(LOG_ERROR, "全局变量初始化值必须是常量");
                         return false;
-                    }
+                    }*/
 
                     GlobalVariable * globalVar = module->newGlobalVariable(type_node->type, id_node_son->name, initValue);
                     if (!globalVar) {
@@ -1433,7 +1433,7 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         //LabelInstruction * falseLabel = node->falseLabel; //继承父节点的falseLabel
         left->falseLabel = node->falseLabel;
         left->trueLabel = shortCircuitLabel;
-
+         //left 和right节点继承父节点的label
         right->falseLabel = node->falseLabel;
         right->trueLabel = node->trueLabel;
 
@@ -1441,11 +1441,17 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         ast_node * left_val_node = ir_visit_ast_node(left);
         if (!left_val_node)
             return false;
+        left->falseLabel = left_val_node->falseLabel;  //new add
+        left->trueLabel = left_val_node->trueLabel;  //这里新增为了解决exp07 这里是为了解决取非节点
+
+
         node->blockInsts.addInst(left_val_node->blockInsts); //添加左边表达式的IR
 
         // 2. 左表达式为假时直接跳转到父亲节点的falseLabel 否则跳到shortCircuitLabel
         //添加条件跳转指令
-        node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, shortCircuitLabel, node->falseLabel));
+      //  node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, shortCircuitLabel, node->falseLabel));
+
+	  node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, left->trueLabel, left->falseLabel));
 
         // 4. 插入 shortCircuitLabel
         node->blockInsts.addInst(shortCircuitLabel);
@@ -1454,8 +1460,10 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         ast_node * right_val_node = ir_visit_ast_node(right);
         if (!right_val_node)
             return false;
+        //right->falseLabel = right_val_node->falseLabel;
+        //right->trueLabel = right_val_node->trueLabel;
         node->blockInsts.addInst(right_val_node->blockInsts); //添加右边表达式的IR
-		//node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, shortCircuitLabel, node->falseLabel));
+		//node->blockInsts.addInst(new BranchInstruction(currentFunc, right_val_node->val, shortCircuitLabel, node->falseLabel));
 
         node->val = right_val_node->val; //结果等于right_val_node->val
 
@@ -1476,8 +1484,9 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         LabelInstruction * shortCircuitLabel = new LabelInstruction(currentFunc);
         //LabelInstruction * trueLabel = node->trueLabel; //继承父节点的trueLabel
 
+        left->trueLabel = node->trueLabel; //继承父节点的trueLabel
         left->falseLabel = shortCircuitLabel;
-        left->trueLabel = node->trueLabel;
+       
 
         // 右表达式的真/假出口继承父节点的标签
         right->trueLabel = node->trueLabel;
@@ -1487,10 +1496,16 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         ast_node * left_val_node = ir_visit_ast_node(left);
         if (!left_val_node)
             return false;
+       left->falseLabel = left_val_node->falseLabel;  //new add
+       left->trueLabel = left_val_node->trueLabel;  //这里新增为了解决exp07
+
         node->blockInsts.addInst(left_val_node->blockInsts);
 
         // 3. 左表达式为真时直接跳转到trueLabel 否则跳到shortCircuitLabel
-        node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, left->trueLabel, shortCircuitLabel));
+       node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, left->trueLabel, left->falseLabel));
+
+	  // node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, left->trueLabel, left->falseLabel));
+
 
         // 4. 插入 shortCircuitLabel
         node->blockInsts.addInst(shortCircuitLabel);
