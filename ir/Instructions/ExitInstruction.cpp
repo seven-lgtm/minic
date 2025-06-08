@@ -33,7 +33,7 @@ ExitInstruction::ExitInstruction(Function * _func, Value * _result)
 void ExitInstruction::toString(std::string & str)
 {
     if (getOperandsNum() == 0) {
-        str = "exit void";
+        str = "exit ";        //当函数返回值是void的时候这里直接改成exit 即可
     } else {
         Value * src1 = getOperand(0);
         str = "exit " + src1->getIRName();
