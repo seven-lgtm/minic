@@ -572,46 +572,7 @@ std::any MiniCCSTVisitor::visitLVal(MiniCParser::LValContext * ctx)
 
     return ast_node::New(varId, lineNo);
 }
-/*
-std::any MiniCCSTVisitor::visitVarDecl(MiniCParser::VarDeclContext * ctx)
-{
-    // varDecl: basicType varDef (T_COMMA varDef)* T_SEMICOLON;
 
-    // 声明语句节点
-    ast_node * stmt_node = create_contain_node(ast_operator_type::AST_OP_DECL_STMT);
-
-    // 类型节点
-    type_attr typeAttr = std::any_cast<type_attr>(visitBasicType(ctx->basicType()));
-
-    for (auto & varCtx: ctx->varDef()) {
-        // 变量名节点
-        ast_node * id_node = std::any_cast<ast_node *>(visitVarDef(varCtx));
-
-        // 创建类型节点
-        ast_node * type_node = create_type_node(typeAttr);
-
-        // 创建变量定义节点
-        ast_node * decl_node = ast_node::New(ast_operator_type::AST_OP_VAR_DECL, type_node, id_node, nullptr);
-
-        // 插入到变量声明语句
-        (void) stmt_node->insert_son_node(decl_node);
-    }
-
-    return stmt_node;
-}
-
-std::any MiniCCSTVisitor::visitVarDef(MiniCParser::VarDefContext * ctx)
-{
-    // varDef: T_ID;
-
-    auto varId = ctx->T_ID()->getText();
-
-    // 获取行号
-    int64_t lineNo = (int64_t) ctx->T_ID()->getSymbol()->getLine();
-
-    return ast_node::New(varId, lineNo);
-}
-*/
 
 /// @brief 非终结运算符basicType的遍历
 /// @param ctx CST上下文

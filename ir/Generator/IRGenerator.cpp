@@ -159,14 +159,73 @@ bool IRGenerator::ir_default(ast_node * node)
 /// @brief 编译单元AST节点翻译成线性中间IR
 /// @param node AST节点
 /// @return 翻译是否成功，true：成功，false：失败
+
 bool IRGenerator::ir_compile_unit(ast_node * node)
 {
     module->setCurrentFunction(nullptr);
 
-    for (auto son: node->sons) {
+    for (auto son: node->sons) { //son:decl-stmt  fuc-def
+        if (son->node_type == ast_operator_type::AST_OP_DECL_STMT) { // 处理全局变量声明
 
-        // 遍历编译单元，要么是函数定义，要么是语句
-        ast_node * son_node = ir_visit_ast_node(son);
+            for (auto & decl: son->sons) { //son:var-decl
+                ast_node * type_node = decl->sons[0];//i32
+                ast_node * id_node = decl->sons[1];//a OR a=9
+				ast_node*  id_node_son=nullptr; //a=9 时候的a
+
+                Value * initValue = nullptr;  // 处理带初始化的全局变量
+                if (id_node->node_type == ast_operator_type::AST_OP_ASSIGN) {//全局变量a=9的情况
+
+                    ast_node * init_expr = id_node->sons[1]; // 处理初始化表达式
+					id_node_son =id_node->sons[0]; //a=9的那个a
+                    ast_node * init_node = ir_visit_ast_node(init_expr);
+
+                    if (!init_node) {
+                        minic_log(LOG_ERROR, "全局变量初始化表达式错误");
+                        return false;
+                    }
+
+                    // 初始化值必须是常量
+                    if (dynamic_cast<ConstInt *>(init_node->val)) {
+                        initValue = init_node->val;
+                    } else {
+                        minic_log(LOG_ERROR, "全局变量初始化值必须是常量");
+                        return false;
+                    }
+
+                    GlobalVariable * globalVar = module->newGlobalVariable(type_node->type, id_node_son->name, initValue);
+                    if (!globalVar) {
+                        return false;
+                    }
+                }else{  //全局变量：a 的情况
+                GlobalVariable * globalVar = module->newGlobalVariable(type_node->type, id_node->name, initValue);
+
+                if (!globalVar) {
+                    return false;
+                }
+			}
+            }
+        } else if (son->node_type == ast_operator_type::AST_OP_FUNC_DEF) {
+            // 处理函数定义（保持不变）
+            ast_node * func_node = ir_visit_ast_node(son);
+            if (!func_node) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+/*
+bool IRGenerator::ir_compile_unit(ast_node * node)
+{
+	// 识别文法：compileUnit: (funcDef | varDecl)* EOF;
+    module->setCurrentFunction(nullptr);
+
+    for (auto son: node->sons) {
+        
+
+            // 遍历编译单元，要么是函数定义，要么是语句
+            ast_node * son_node = ir_visit_ast_node(son);
         if (!son_node) {
             // TODO 自行追加语义错误处理
             return false;
@@ -174,11 +233,12 @@ bool IRGenerator::ir_compile_unit(ast_node * node)
     }
 
     return true;
-}
+}*/
 
 /// @brief 函数定义AST节点翻译成线性中间IR
 /// @param node AST节点
 /// @return 翻译是否成功，true：成功，false：失败
+
 bool IRGenerator::ir_function_define(ast_node * node)
 {
     bool result;
@@ -1048,8 +1108,6 @@ bool IRGenerator::ir_return(ast_node * node)
 }
 
 
-
-
 /// @brief 类型叶子节点翻译成线性中间IR
 /// @param node AST节点
 /// @return 翻译是否成功，true：成功，false：失败
@@ -1115,18 +1173,6 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
     /// @brief 变量定声明节点翻译成线性中间IR
     /// @param node AST节点
     /// @return 翻译是否成功，true：成功，false：失败
-/*	
-    bool IRGenerator::ir_variable_declare(ast_node * node)
-    {
-        // 共有两个孩子，第一个类型，第二个变量名
-
-        // TODO 这里可强化类型等检查
-
-        node->val = module->newVarValue(node->sons[0]->type, node->sons[1]->name);
-
-        return true;
-    }*/
-
     bool IRGenerator::ir_variable_declare(ast_node * node) //var-decl节点
     {
         // 共有两个孩子：第一个是类型节点，第二个是标识符节点或赋值节点
@@ -1134,16 +1180,16 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         ast_node * id_node = node->sons[1]; //id_node 可能是a 或者 a=0
 
         Function * currentFunc = module->getCurrentFunction();
-        
+
 		LocalVariable *var=nullptr;
 
             // 创建局部变量并加入符号表
-            if (id_node->node_type == ast_operator_type::AST_OP_ASSIGN)
+        if (id_node->node_type == ast_operator_type::AST_OP_ASSIGN)
         {
             ast_node * id = id_node->sons[0];
             var = static_cast<LocalVariable *>(module->newVarValue(type_node->type, id->name));
         }
-        else{
+		else{
             var = static_cast<LocalVariable *>(module->newVarValue(type_node->type, id_node->name));
 		}
 
@@ -1168,6 +1214,7 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
             
         }
         node->val = var;
+	
 
         return true;
     }

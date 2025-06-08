@@ -209,7 +209,7 @@ Value * Module::newVarValue(Type * type, std::string name)
         return nullptr;
     }
 
-    if (currentFunc) {
+    if (currentFunc) {    //判断是全局变量还是局部变量
 
         // 获取变量作用域的层级
         int32_t scope_level;
@@ -219,14 +219,15 @@ Value * Module::newVarValue(Type * type, std::string name)
             scope_level = scopeStack->getCurrentScopeLevel();
         }
 
-        retVal = currentFunc->newLocalVarValue(type, name, scope_level);
+        retVal = currentFunc->newLocalVarValue(type, name, scope_level);  //局部变量
+        scopeStack->insertValue(retVal);
 
     } else {
-        retVal = newGlobalVariable(type, name);
+        retVal = newGlobalVariable(type, name);  //全局变量
     }
 
     // 增加做作用域中
-    scopeStack->insertValue(retVal);
+    //scopeStack->insertValue(retVal);
 
     return retVal;
 }
@@ -244,17 +245,46 @@ Value * Module::findVarValue(std::string name)
     return tempValue;
 }
 
+
+
+
 ///
-/// @brief 新建全局变量，要求name必须有效，并且加入到全局符号表中。不检查是否现有的符号表中是否存在。
+/// @brief 新建全局变量（初始化），要求name必须有效，并且加入到全局符号表中。不检查是否现有的符号表中是否存在。
 /// @param type 类型
 /// @param name 名字
 /// @return Value* 全局变量
 ///
+/*
 GlobalVariable * Module::newGlobalVariable(Type * type, std::string name)
 {
     GlobalVariable * val = new GlobalVariable(type, name);
 
     insertGlobalValueDirectly(val);
+
+    return val; //原来的新建全局变量函数
+}
+*/
+GlobalVariable * Module::newGlobalVariable(Type * type, std::string name, Value * initValue)
+{
+    // 检查变量是否已存在
+	
+    GlobalVariable * existingVar = findGlobalVariable(name);
+    if (existingVar) {
+        minic_log(LOG_ERROR, "全局变量 %s 已存在", name.c_str());
+        return nullptr;
+    }
+
+    GlobalVariable * val = new GlobalVariable(type, name); //创建一个全局变量
+
+    // 设置初始化值
+    if (initValue) {
+        val->setInitValue(initValue);
+    }
+
+    insertGlobalValueDirectly(val);
+
+    // 将变量加入作用域
+    scopeStack->insertValue(val);  //全局变量在这里处理
 
     return val;
 }
@@ -322,14 +352,31 @@ void Module::outputIR(const std::string & filePath)
         printf("fopen() failed\n");
         return;
     }
-
+/*
     // 全局变量遍历输出对应的declare指令
     for (auto var: globalVariableVector) {
 
         std::string str;
         var->toDeclareString(str);
         fprintf(fp, "%s\n", str.c_str());
-    }
+    }*/
+    
+
+    for (auto var: globalVariableVector) {
+        std::string str;
+
+        if (var->getInitValue()) {
+            // 有初始化的全局变量
+            str = "declare " + var->getType()->toString() + " " + var->getIRName() + " = " +
+                  var->getInitValue()->getIRName();
+        } else {
+            // 无初始化的全局变量
+            str = "declare " + var->getType()->toString() + " " + var->getIRName(); 
+        }
+
+        fprintf(fp, "%s\n", str.c_str());
+    }  //输出全局变量的IR  //注意 getInitValue
+	
 
     // 遍历所有的线性IR指令，文本输出
     for (auto func: funcVector) {

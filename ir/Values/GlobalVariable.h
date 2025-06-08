@@ -25,6 +25,23 @@
 class GlobalVariable : public GlobalValue {
 
 public:
+
+
+    /// @brief 设置全局变量的初始化值
+    /// @param value 初始化值
+    void setInitValue(Value * value)
+    {
+        initValue = value;
+        inBSSSection = (value == nullptr); // 有初始化值则不在BSS段
+    }
+
+    /// @brief 获取全局变量的初始化值
+    /// @return 初始化值
+    Value * getInitValue() const
+    {
+        return initValue;
+    } //新增两个函数setInitValue  getInitValue()用于设置、获取全局变量的初始值
+
     ///
     /// @brief 构建全局变量，默认对齐为4字节
     /// @param _type 类型
@@ -91,8 +108,14 @@ public:
     {
         str = "declare " + getType()->toString() + " " + getIRName();
     }
+//可以删除
 
 private:
+    ///
+    /// @brief  全局变量的初始化值
+    ///
+    Value * initValue = nullptr;   //新增 用于全局变量的初始值
+
     ///
     /// @brief 变量加载到寄存器中时对应的寄存器编号
     ///
@@ -103,3 +126,7 @@ private:
     ///
     bool inBSSSection = true;
 };
+
+
+
+

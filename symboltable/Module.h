@@ -143,24 +143,32 @@ public:
     /// @return 当前作用域层级
     int getScopeLevel();
 
+    /// @brief 新建全局变量（带初始化）
+    /// @param type 变量类型
+    /// @param name 变量名
+    /// @param initValue 初始化值（可选）
+    /// @return 全局变量对象
+	
+    GlobalVariable * newGlobalVariable(Type * type, std::string name, Value * initValue = nullptr);
+
+    GlobalVariable * findGlobalVariable(std::string name);
+
 protected:
     /// @brief 根据整数值获取当前符号
     /// \param name 变量名
     /// \return 变量对应的值
     ConstInt * findConstInt(int32_t val);
 
-    ///
-    /// @brief 新建全局变量，要求name必须有效，并且加入到全局符号表中。
-    /// @param type 类型
-    /// @param name 名字
-    /// @return Value* 全局变量
-    ///
-    GlobalVariable * newGlobalVariable(Type * type, std::string name);
+    
+    //GlobalVariable * newGlobalVariable(Type * type, std::string name);  //原来的新建全局变量
+	
+
+    
 
     /// @brief 根据变量名获取当前符号（只管理全局变量）
     /// \param name 变量名
     /// \return 变量对应的值
-    GlobalVariable * findGlobalVariable(std::string name);
+   // GlobalVariable * findGlobalVariable(std::string name);// 修改过 从protect到public
 
     /// @brief 直接插入函数到符号表中，不考虑现有的表中是否存在
     /// @param func 函数对象
