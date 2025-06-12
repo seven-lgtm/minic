@@ -55,7 +55,6 @@ enum class IRInstOperator : std::int8_t {
 
     /// @brief if/ifelse语句
     IRINST_OP_BRANCH,
-    
 
     /// @brief 函数调用，多目运算，个数不限
     IRINST_OP_FUNC_CALL,
@@ -64,9 +63,14 @@ enum class IRInstOperator : std::int8_t {
     IRINST_OP_ARG,
 
     /* 后续可追加其他的IR指令 */
+    IRINST_OP_LOAD,
+    IRINST_OP_STORE,
+
+   // IRINST_OP_MOV,
 
     /// @brief 最大指令码，也是无效指令
     IRINST_OP_MAX
+
 };
 
 ///

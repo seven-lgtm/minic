@@ -34,6 +34,9 @@ void MinusInstruction::toString(std::string & str)
             // 取负指令
             str = getIRName() + " = neg " + src->getIRName();
             break;
+        case IRInstOperator::IRINST_OP_LOAD: 
+            str = getIRName() + " = *" + src->getIRName();
+            break;
         default:
             // 未知指令
             Instruction::toString(str);

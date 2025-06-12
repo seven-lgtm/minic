@@ -24,6 +24,15 @@
 class Type {
 
 public:
+    
+        /// @brief 获取根类型（指针连续解引用后的最终类型）
+        /// @return 根类型
+        [[nodiscard]] virtual const Type * getRootType() const
+        {
+            // 默认实现：非指针类型返回自身
+            return this;
+        } //new to type:Point
+    
     ///
     /// @brief 类型ID
     ///

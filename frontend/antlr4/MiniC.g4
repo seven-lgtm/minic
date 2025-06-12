@@ -17,18 +17,17 @@ compileUnit: (funcDef | varDecl)* EOF;
 funcDef: returnType T_ID T_L_PAREN (paramList)?  T_R_PAREN block; 
 
 //函数返回值类型
-returnType: T_INT
-           | T_VOID;  
+returnType: T_INT       //这里函数返回值是数组的形式 ???
+            | T_VOID;  
 
 //函数参数 int a,int b
 paramList: param (T_COMMA param)*;
  
  //  int a
-param: basicType T_ID;
+param: basicType T_ID;   //数组作为参数的形式？？？？？
 
 // 语句块看用作函数体，这里允许多个语句，并且不含任何语句
-block:
-	T_L_BRACE blockItemList? T_R_BRACE; //已经支持空语句{} blockItemListke xuan
+block: T_L_BRACE blockItemList? T_R_BRACE; //已经支持空语句{} blockItemListke xuan
 
 // 每个ItemList可包含至少一个Item
 blockItemList: blockItem+;
@@ -39,12 +38,17 @@ blockItem: statement | varDecl;
 // 变量声明，变量的初始化
 varDecl: basicType varDef (T_COMMA varDef)*  T_SEMICOLON;
 
+// 变量声明，支持变量的初始化 int a,b=3; 
+//varDef: T_ID  (T_ASSIGN expr)?
+	//    | T_ID (T_L_BRACKET expr? T_R_BRACKET)* ; //包括数组 这里还不包括初始化 int [a]
+
+varDef: T_ID (arraySuffix)? (T_ASSIGN expr)?;
+arraySuffix: (T_L_BRACKET expr T_R_BRACKET)+;
+
 // 基本类型
 basicType: T_INT;
        
 
-// 变量定义
-//varDef: T_ID;
 
 //  statement
 statement:
@@ -80,12 +84,6 @@ mulExp: unaryExp (mulOp unaryExp)*;
 mulOp: T_MUL | T_DIV | T_MOD;
 
 
-/* 
-unaryExp: 
-	(T_SUB | T_NOT)* (primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN)  // 支持连续负号
-	| primaryExp // 基础表达式
-	| T_ID T_L_PAREN realParamList? T_R_PAREN;								 // 函数调用
-*/
 
 // 一元表达式（最高优先级）
 unaryExp:
@@ -104,22 +102,24 @@ primaryExp:
 // 实参列表
 realParamList: expr (T_COMMA expr)*;
 
-// 变量声明，支持变量的初始化
-varDef: T_ID (T_ASSIGN expr)?; // 添加初始化表达式支持
-//int a,b=3;
-//int a=6,n=9;
-// int a=3,b,c=90
-
 // 左值表达式
-lVal: T_ID;
+//lVal: T_ID (T_L_BRACKET expr T_R_BRACKET)*; //这里包括数组 
+lVal: T_ID (arrayIndexing)?;
+arrayIndexing: (T_L_BRACKET expr T_R_BRACKET)+;
 
-// 用正规式来进行词法规则的描述
+//statement :lVal T_ASSIGN expr T_SEMICOLON # assignStatement  支持a=3或者 a[2][5]=9 
+// 也支持a[2][1]=a[2][8] 因为expr也包括lVal
+
+	// 用正规式来进行词法规则的描述
 
 T_L_PAREN: '(';
 T_R_PAREN: ')';
 T_SEMICOLON: ';';
 T_L_BRACE: '{';
 T_R_BRACE: '}';
+T_L_BRACKET:'[';
+T_R_BRACKET:']';
+
 
 T_ASSIGN: '=';
 T_COMMA: ',';
@@ -131,7 +131,7 @@ T_MUL: '*';
 T_DIV: '/';
 
 //关系运算
-T_LT: '<';  //less than 
+T_LT: '<';  
 T_GT: '>';
 T_LE: '<=';  
 T_GE: '>=';
@@ -142,6 +142,7 @@ T_NE: '!=';
 T_AND:'&&';
 T_OR: '||';
 T_NOT:'!';
+
 
 
 

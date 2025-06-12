@@ -33,7 +33,6 @@ Function::Function(std::string _name, FunctionType * _type, bool _builtin)
     setAlignment(1);
 }
 
-
 ///
 /// @brief 析构函数
 /// @brief 释放函数占用的内存和IR指令代码
@@ -108,13 +107,17 @@ void Function::toString(std::string & str)
 
         // 局部变量和临时变量需要输出declare语句
         str += "\tdeclare " + var->getType()->toString() + " " + var->getIRName();
-
+        std::vector<int> dims = var->array_dims;
+        if (!dims.empty()) {
+            for (auto num: dims) {
+                str += "[" + std::to_string(num) + "]";
+            }
+        }
         std::string extraStr;
         std::string realName = var->getName();
         if (!realName.empty()) {
             str += " ; " + std::to_string(var->getScopeLevel()) + ":" + realName;
         }
-
         str += "\n";
     }
 

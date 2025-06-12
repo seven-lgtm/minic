@@ -18,6 +18,7 @@
 #include "VoidType.h"
 
 #include "MoveInstruction.h"
+#include "PointerType.h"
 
 ///
 /// @brief 构造函数
@@ -32,12 +33,18 @@ MoveInstruction::MoveInstruction(Function * _func, Value * _result, Value * _src
     addOperand(_srcVal1);
 }
 
-/// @brief 转换成字符串显示
-/// @param str 转换后的字符串
 void MoveInstruction::toString(std::string & str)
 {
+    Value * dstVal = getOperand(0);
+    Value * srcVal = getOperand(1);
 
-    Value *dstVal = getOperand(0), *srcVal = getOperand(1);
+    // 检查目标是否是数组元素（指针类型）
+    if (dstVal->getType()->isPointerType()) {
+        str = "*" + dstVal->getIRName() + " = " + srcVal->getIRName();
+    } else if (srcVal->getType()->isPointerType()) {
 
-    str = dstVal->getIRName() + " = " + srcVal->getIRName();
+        str = dstVal->getIRName() + " = " +"*"  + srcVal->getIRName();
+    }else{
+		 str = dstVal->getIRName() + " = " + srcVal->getIRName();
+    }
 }

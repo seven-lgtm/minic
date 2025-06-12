@@ -117,6 +117,9 @@ enum class ast_operator_type : int {
 
     // TODO 抽象语法树其它内部节点运算符追加
 
+    AST_OP_ARRAY_INDEX, // 新增：数组下标访问节点
+    AST_OP_ARRAY_DECL,  // 新增：数组声明节点
+
     /// @brief 最大标识符，表示非法运算符
     AST_OP_MAX,
 };
@@ -130,8 +133,13 @@ public:
     LabelInstruction*  trueLabel; // 真出口标签
     LabelInstruction*  falseLabel;  // 假出口标签 用于逻辑运算的短路求值以及 跳转语句 if while break continue
 
+    // 新增：用于存储数组维度信息
+    std::vector<int> array_dims;
+
     /// @brief 节点类型
     ast_operator_type node_type;
+
+	bool fatherIsAssign=false;
 
     /// @brief 行号信息，主要针对叶子节点有用
     int64_t line_no;

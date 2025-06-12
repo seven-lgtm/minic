@@ -407,14 +407,3 @@ ast_node * add_var_decl_node(ast_node * stmt_node, var_id_attr & id)
 
     return stmt_node;
 }
-/*
-// 添加克隆构造函数
-ast_node::ast_node(const ast_node & other)
-    : node_type(other.node_type), line_no(other.line_no), type(other.type), integer_val(other.integer_val),
-      float_val(other.float_val), name(other.name), parent(nullptr), // 新克隆节点没有父节点
-      sons(),                                                        // 不复制孩子节点
-      needScope(other.needScope)
-{
-    // 注意：这里不复制孩子节点，因为通常只需要浅拷贝
-}
-*/

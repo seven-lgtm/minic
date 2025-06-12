@@ -58,6 +58,7 @@ class PointerType : public Type {
     };
 
 public:
+
     /// @brief PointerType的构造函数
     /// @param[in] pointeeType 指针所指向的类型
     ///
@@ -82,16 +83,17 @@ public:
     /// @brief 返回根类型，也就是连续解引用后的类型
     /// @return const Type*
     ///
+	
     [[nodiscard]] const Type * getRootType() const
     {
         return rootType;
     }
-
-    ///
-    /// @brief 返回指针所指向的类型，只解引用一次
-    /// @return const Type*
-    ///
-    [[nodiscard]] const Type * getPointeeType() const
+	
+        ///
+        /// @brief 返回指针所指向的类型，只解引用一次
+        /// @return const Type*
+        ///
+        [[nodiscard]] const Type * getPointeeType() const
     {
         return pointeeType;
     }
@@ -136,7 +138,8 @@ private:
     /// @brief 所有指针操作都解引用后指向的元素类型，不再是指针类型
     /// 例如：指针类型[3 x i32]***的根类型为[3 x i32]
     ///
-    const Type * rootType = nullptr;
+     const Type * rootType = nullptr;
+   // Type * rootType = nullptr;
 
     ///
     /// @brief *连续的个数，指针的深度

@@ -32,6 +32,19 @@ Module::Module(std::string _name) : name(_name)
     (void) newFunction("getint", IntegerType::getTypeInt(), {}, true);
     (void) newFunction("putch", VoidType::getType(), {new FormalParam{IntegerType::getTypeInt(), ""}}, true);
     (void) newFunction("getch", IntegerType::getTypeInt(), {}, true);
+   // int getarray(int a[]);
+   // void putarray(int n, int a[]);
+    /*std::vector<FormalParam*> getarrayParams = {
+         new FormalParam(new ArrayType(IntegerType::getTypeInt()), "a")
+     };
+     (void)newFunction("getarray", IntegerType::getTypeInt(), getarrayParams, true);
+
+     std::vector<FormalParam*> putarrayParams = {
+         new FormalParam(IntegerType::getTypeInt(), "n"),
+         new FormalParam(new ArrayType(IntegerType::getTypeInt()), "a")
+     };
+     (void)newFunction("putarray", VoidType::getType(), putarrayParams, true);
+ }*/
 }
 
 
@@ -247,23 +260,13 @@ Value * Module::findVarValue(std::string name)
 
 
 
-
 ///
 /// @brief 新建全局变量（初始化），要求name必须有效，并且加入到全局符号表中。不检查是否现有的符号表中是否存在。
 /// @param type 类型
 /// @param name 名字
 /// @return Value* 全局变量
 ///
-/*
-GlobalVariable * Module::newGlobalVariable(Type * type, std::string name)
-{
-    GlobalVariable * val = new GlobalVariable(type, name);
 
-    insertGlobalValueDirectly(val);
-
-    return val; //原来的新建全局变量函数
-}
-*/
 GlobalVariable * Module::newGlobalVariable(Type * type, std::string name, Value * initValue)
 {
     // 检查变量是否已存在
@@ -352,15 +355,7 @@ void Module::outputIR(const std::string & filePath)
         printf("fopen() failed\n");
         return;
     }
-/*
-    // 全局变量遍历输出对应的declare指令
-    for (auto var: globalVariableVector) {
 
-        std::string str;
-        var->toDeclareString(str);
-        fprintf(fp, "%s\n", str.c_str());
-    }*/
-    
 
     for (auto var: globalVariableVector) {
         std::string str;
@@ -368,10 +363,17 @@ void Module::outputIR(const std::string & filePath)
         if (var->getInitValue()) {
             // 有初始化的全局变量
             str = "declare " + var->getType()->toString() + " " + var->getIRName() + " = " +
-                  var->getInitValue()->getIRName();
+                  var->getInitValue()->getIRName(); // declare i32 @a = 9
+        } else if (var->getTotalSize()) {          // declare i32 @a[3][4]
+            str = "declare " + var->getType()->toString() + " " + var->getIRName() ;
+            std::vector<int> dims = var->getArrayDimensions();
+			for(auto num:dims){
+                str = str + "[" + std::to_string(num) + "]";
+            }
+
         } else {
             // 无初始化的全局变量
-            str = "declare " + var->getType()->toString() + " " + var->getIRName(); 
+            str = "declare " + var->getType()->toString() + " " + var->getIRName(); // declare i32 @a
         }
 
         fprintf(fp, "%s\n", str.c_str());

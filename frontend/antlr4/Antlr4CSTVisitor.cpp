@@ -317,8 +317,7 @@ std::any MiniCCSTVisitor::visitWhileStatement(MiniCParser::WhileStatementContext
     ast_node * cond = std::any_cast<ast_node *>(visitExpr(ctx->expr()));
     ast_node * body = std::any_cast<ast_node *>(visitStatement(ctx->statement()));
     ast_node * whileNode = create_contain_node(ast_operator_type::AST_OP_WHILE, cond, body);
-    //whileNode->loopStartLabel = generateLabel(); // 循环入口标签
-    //whileNode->loopEndLabel = generateLabel();   // 循环出口标签
+    
     return whileNode;
 }
 
@@ -583,16 +582,34 @@ std::any MiniCCSTVisitor::visitPrimaryExp(MiniCParser::PrimaryExpContext * ctx)
     return node;
 }
 
+/// @brief 非终结运算符lVal左表达式的遍历
+/// @param ctx CST上下文
 std::any MiniCCSTVisitor::visitLVal(MiniCParser::LValContext * ctx)
 {
-    // 识别文法产生式：lVal: T_ID;
+  //  识别文法 lVal: T_ID (arrayIndexing)?; 
+ //arrayIndexing: (T_L_BRACKET expr T_R_BRACKET)+; 包括数组
+
     // 获取ID的名字
     auto varId = ctx->T_ID()->getText();
-
     // 获取行号
     int64_t lineNo = (int64_t) ctx->T_ID()->getSymbol()->getLine();
 
-    return ast_node::New(varId, lineNo);
+    ast_node * node = ast_node::New(varId, lineNo);
+
+   // std::vector<int> indexes; //数组的维度
+    
+	// 处理数组下标访问
+    if (ctx->arrayIndexing()) {
+        ast_node * accessNode = create_contain_node(ast_operator_type::AST_OP_ARRAY_INDEX);
+        accessNode->insert_son_node(node);
+        for (auto exprCtx: ctx->arrayIndexing()->expr()) {
+            ast_node * exprNode = std::any_cast<ast_node *>(visitExpr(exprCtx));
+         //   indexes.push_back(exprNode->integer_val);
+            accessNode->insert_son_node(exprNode); //将每一个维度都插入到 accessNode
+        }
+        return accessNode;
+    }
+    return node; //左值不是数组 单纯一个 a...
 }
 
 
@@ -610,23 +627,40 @@ std::any MiniCCSTVisitor::visitBasicType(MiniCParser::BasicTypeContext * ctx)
     return attr;
 }
 
-/// @brief 非终结运算符varDef的遍历
+/// @brief 非终结运算符varDef变量定义的遍历
 /// @param ctx CST上下文
 std::any MiniCCSTVisitor::visitVarDef(MiniCParser::VarDefContext * ctx)
 { 
-	//识别文法varDef: T_ID (T_ASSIGN expr)?;  变量  a=0 b
+	//识别文法varDef: varDef: T_ID (arraySuffix)? (T_ASSIGN expr)?;
+     //arraySuffix: (T_L_BRACKET expr T_R_BRACKET)+;
     auto varId = ctx->T_ID()->getText();//a
     int64_t lineNo = (int64_t) ctx->T_ID()->getSymbol()->getLine();//行号
+    ast_node * idNode = ast_node::New(varId, lineNo);
 
     // 如果有初始化表达式 a
     if (ctx->expr()) { // 创建赋值节点 (AST_OP_ASSIGN)
         ast_node * initExpr = std::any_cast<ast_node *>(visitExpr(ctx->expr()));
-        ast_node * idNode = ast_node::New(varId, lineNo);
         return ast_node::New(ast_operator_type::AST_OP_ASSIGN, idNode, initExpr, nullptr);
     }
-      //返回a 或者 a=0 节点
-    // 没有初始化表达式 a=0
-    return ast_node::New(varId, lineNo);
+     
+    // 这里处理数组
+    if (ctx->arraySuffix()) {
+        // 这里处理数组
+        std::vector<int> dimExprs;
+
+        ast_node * arrayNode = create_contain_node(ast_operator_type::AST_OP_ARRAY_DECL);
+		arrayNode->insert_son_node(idNode);
+
+        for (auto exprCtx: ctx->arraySuffix()->expr()) {
+            ast_node * exprNode = std::any_cast<ast_node *>(visitExpr(exprCtx));
+            dimExprs.push_back(exprNode->integer_val); //计算数组的维度  一个维度有一个exprNode
+            arrayNode->insert_son_node(exprNode);
+        }
+        arrayNode->array_dims = dimExprs; // 该节点维度
+		return arrayNode; 
+    }
+
+    return idNode;// 没有初始化表达式 a=0
 }
 
 /// @brief 非终结运算符varDecl的遍历

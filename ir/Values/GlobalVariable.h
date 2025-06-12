@@ -41,7 +41,27 @@ public:
     {
         return initValue;
     } //新增两个函数setInitValue  getInitValue()用于设置、获取全局变量的初始值
+/*
+    void setTotalSize(int32_t size)
+    {
+        total_size = size; // new set数组的大小
+    }
 
+    int getTotalSize()
+    {
+        return total_size; // new  get数组的大小
+    }
+
+    void setArrayDimensions(std::vector<int> & dims)
+    {
+        array_dims = dims;
+    }
+
+    std::vector<int> & getArrayDimensions()
+    {
+        return array_dims;
+    }
+*/
     ///
     /// @brief 构建全局变量，默认对齐为4字节
     /// @param _type 类型
@@ -115,6 +135,9 @@ private:
     /// @brief  全局变量的初始化值
     ///
     Value * initValue = nullptr;   //新增 用于全局变量的初始值
+
+   // int32_t total_size = 0; // 数组总字节大小 新增
+ //   std::vector<int> array_dims; // 数组维度信息
 
     ///
     /// @brief 变量加载到寄存器中时对应的寄存器编号

@@ -37,6 +37,10 @@ public:
 
     virtual std::any visitVarDecl(MiniCParser::VarDeclContext *context) = 0;
 
+    virtual std::any visitVarDef(MiniCParser::VarDefContext *context) = 0;
+
+    virtual std::any visitArraySuffix(MiniCParser::ArraySuffixContext *context) = 0;
+
     virtual std::any visitBasicType(MiniCParser::BasicTypeContext *context) = 0;
 
     virtual std::any visitReturnStatement(MiniCParser::ReturnStatementContext *context) = 0;
@@ -79,9 +83,9 @@ public:
 
     virtual std::any visitRealParamList(MiniCParser::RealParamListContext *context) = 0;
 
-    virtual std::any visitVarDef(MiniCParser::VarDefContext *context) = 0;
-
     virtual std::any visitLVal(MiniCParser::LValContext *context) = 0;
+
+    virtual std::any visitArrayIndexing(MiniCParser::ArrayIndexingContext *context) = 0;
 
 
 };

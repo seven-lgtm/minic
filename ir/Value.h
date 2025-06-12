@@ -48,10 +48,14 @@ protected:
     ///
     std::vector<Use *> uses;
 
+    int32_t total_size = 0;      // 数组总字节大小 新增
+    std::vector<int> array_dims; // 数组维度信息
+
 public:
     /// @brief 构造函数
     /// @param _type
     explicit Value(Type * _type);
+   
 
     /// @brief 析构函数
     virtual ~Value();
@@ -124,4 +128,10 @@ public:
     /// @return int32_t 寄存器编号
     ///
     virtual void setLoadRegId(int32_t regId);
+
+    void setTotalSize(int32_t size);
+    int getTotalSize();
+    void setArrayDimensions(std::vector<int> & dims);
+    std::vector<int> & getArrayDimensions();
+    
 };

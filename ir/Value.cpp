@@ -142,3 +142,23 @@ void Value::setLoadRegId(int32_t regId)
 {
     (void) regId;
 }
+
+void Value::setTotalSize(int32_t size)
+{
+    total_size = size; // new set数组的大小
+}
+
+int Value::getTotalSize()
+{
+    return total_size; // new  get数组的大小
+}
+
+void Value::setArrayDimensions(std::vector<int> & dims)
+{
+    array_dims = dims;
+}
+
+std::vector<int> & Value::getArrayDimensions()
+{
+    return array_dims;
+}

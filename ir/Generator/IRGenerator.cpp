@@ -37,8 +37,10 @@
 #include "MinusInstruction.h"
 #include "BranchInstruction.h"
 #include "ArgInstruction.h"
-
+#include "PointerType.h"
 #include "ScopeStack.h"
+#include "LoadInstruction.h"
+#include "StoreInstruction.h"
 
 /// @brief 构造函数
 /// @param _root AST的根
@@ -95,6 +97,10 @@ IRGenerator::IRGenerator(ast_node * _root, Module * _module) : root(_root), modu
     /* 变量定义语句 */
     ast2ir_handlers[ast_operator_type::AST_OP_DECL_STMT] = &IRGenerator::ir_declare_statment;
     ast2ir_handlers[ast_operator_type::AST_OP_VAR_DECL] = &IRGenerator::ir_variable_declare;
+
+        /*数组相关*/
+    ast2ir_handlers[ast_operator_type::AST_OP_ARRAY_INDEX] = &IRGenerator::ir_array_index;
+    //ast2ir_handlers[ast_operator_type::AST_OP_ARRAY_DECL] = &IRGenerator::ir_array_declare;
 
     /* 语句块 */
     ast2ir_handlers[ast_operator_type::AST_OP_BLOCK] = &IRGenerator::ir_block;
@@ -169,7 +175,7 @@ bool IRGenerator::ir_compile_unit(ast_node * node)
 
             for (auto & decl: son->sons) { //son:var-decl
                 ast_node * type_node = decl->sons[0];//i32
-                ast_node * id_node = decl->sons[1];//a OR a=9
+                ast_node * id_node = decl->sons[1];//a OR a=9 OR 数组节点
 				ast_node*  id_node_son=nullptr; //a=9 时候的a
 
                 Value * initValue = nullptr;  // 处理带初始化的全局变量
@@ -187,22 +193,28 @@ bool IRGenerator::ir_compile_unit(ast_node * node)
                     // 初始化值必须是常量
                     if (dynamic_cast<ConstInt *>(init_node->val)) {
                         initValue = init_node->val;
-                    } /*else {
-                        minic_log(LOG_ERROR, "全局变量初始化值必须是常量");
-                        return false;
-                    }*/
+                    } 
 
                     GlobalVariable * globalVar = module->newGlobalVariable(type_node->type, id_node_son->name, initValue);
                     if (!globalVar) {
                         return false;
                     }
-                }else{  //全局变量：a 的情况
-                GlobalVariable * globalVar = module->newGlobalVariable(type_node->type, id_node->name, initValue);
+                } else if (id_node->node_type == ast_operator_type::AST_OP_ARRAY_DECL) {// 这里处理数组
+                        int total_size = 4; // int类型大小
+                        for (auto dim: id_node->array_dims) {
+                            total_size *= dim;
+                        }
+                        GlobalVariable * globalVar =module->newGlobalVariable(type_node->type, id_node->sons[0]->name);
+                        globalVar->setTotalSize(total_size);
+                        globalVar->setArrayDimensions(id_node->array_dims);
 
-                if (!globalVar) {
-                    return false;
-                }
-			}
+                    } else { //全局变量：a 的情况
+                        GlobalVariable * globalVar =
+                            module->newGlobalVariable(type_node->type, id_node->name, initValue);
+                        if (!globalVar) {
+                            return false;
+                        }
+                    }
             }
         } else if (son->node_type == ast_operator_type::AST_OP_FUNC_DEF) {
             // 处理函数定义（保持不变）
@@ -215,25 +227,7 @@ bool IRGenerator::ir_compile_unit(ast_node * node)
 
     return true;
 }
-/*
-bool IRGenerator::ir_compile_unit(ast_node * node)
-{
-	// 识别文法：compileUnit: (funcDef | varDecl)* EOF;
-    module->setCurrentFunction(nullptr);
 
-    for (auto son: node->sons) {
-        
-
-            // 遍历编译单元，要么是函数定义，要么是语句
-            ast_node * son_node = ir_visit_ast_node(son);
-        if (!son_node) {
-            // TODO 自行追加语义错误处理
-            return false;
-        }
-    }
-
-    return true;
-}*/
 
 /// @brief 函数定义AST节点翻译成线性中间IR
 /// @param node AST节点
@@ -1025,13 +1019,17 @@ bool IRGenerator::ir_ge(ast_node * node)
 /// @brief 赋值AST节点翻译成线性中间IR
 /// @param node AST节点
 /// @return 翻译是否成功，true：成功，false：失败
+
 bool IRGenerator::ir_assign(ast_node * node)
 {
     ast_node * son1_node = node->sons[0];
     ast_node * son2_node = node->sons[1];
 
-    // 赋值节点，自右往左运算
-
+    if (node->node_type == ast_operator_type::AST_OP_ASSIGN) {
+        son1_node->fatherIsAssign = true;
+        son2_node->fatherIsAssign = true;
+    } //数组的索引要使用这个字段
+   
     // 赋值运算符的左侧操作数
     ast_node * left = ir_visit_ast_node(son1_node);
     if (!left) {
@@ -1046,21 +1044,35 @@ bool IRGenerator::ir_assign(ast_node * node)
         // 某个变量没有定值
         return false;
     }
+   
+        node->blockInsts.addInst(right->blockInsts);
+        node->blockInsts.addInst(left->blockInsts);
 
-    // 这里只处理整型的数据，如需支持实数，则需要针对类型进行处理
+       
+    //对于左右两边都是赋值语句，要特殊处理，创建一个临时变量
+        if (left->node_type == ast_operator_type::AST_OP_ARRAY_INDEX && right->node_type ==
+       ast_operator_type::AST_OP_ARRAY_INDEX) {
+		 MinusInstruction * LoadInst = new MinusInstruction(module->getCurrentFunction(),
+                                                              IRInstOperator::IRINST_OP_LOAD,
+                                                              right->val,
+                                                              IntegerType::getTypeInt());
+
+         MoveInstruction * StoreInst = new MoveInstruction(module->getCurrentFunction(),left->val, LoadInst);
+         node->blockInsts.addInst(LoadInst);
+         node->blockInsts.addInst(StoreInst);
+         return true;         
+        }
 
     MoveInstruction * movInst = new MoveInstruction(module->getCurrentFunction(), left->val, right->val);
 
     // 创建临时变量保存IR的值，以及线性IR指令
-    node->blockInsts.addInst(right->blockInsts);
-    node->blockInsts.addInst(left->blockInsts);
     node->blockInsts.addInst(movInst);
 
     // 这里假定赋值的类型是一致的
     node->val = movInst;
 
     return true;
-}
+    }
 
 /// @brief return节点翻译成线性中间IR
 /// @param node AST节点
@@ -1177,27 +1189,32 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
     {
         // 共有两个孩子：第一个是类型节点，第二个是标识符节点或赋值节点
         ast_node * type_node = node->sons[0];
-        ast_node * id_node = node->sons[1]; //id_node 可能是a 或者 a=0
+        ast_node * id_node = node->sons[1]; //id_node 可能是a 或者 a=0  或者 a[4][5]
 
         Function * currentFunc = module->getCurrentFunction();
 
-		LocalVariable *var=nullptr;
-
+        LocalVariable * var = nullptr;
+		
             // 创建局部变量并加入符号表
-        if (id_node->node_type == ast_operator_type::AST_OP_ASSIGN)
+        if (id_node->node_type == ast_operator_type::AST_OP_ASSIGN) // 处理已初始化变量
         {
-            ast_node * id = id_node->sons[0];
-            var = static_cast<LocalVariable *>(module->newVarValue(type_node->type, id->name));
-        }
-		else{
-            var = static_cast<LocalVariable *>(module->newVarValue(type_node->type, id_node->name));
-		}
+            ast_node * id_node_son = id_node->sons[0];
+            var = static_cast<LocalVariable *>(module->newVarValue(type_node->type, id_node_son->name));
+        } else if (id_node->node_type == ast_operator_type::AST_OP_ARRAY_DECL) { //处理数组   
+			var = static_cast<LocalVariable *>(module->newVarValue(type_node->type, id_node->sons[0]->name));
+			var->setArrayDimensions(id_node->array_dims);
+           //Type * elementType = type_node->type;
+          //  PointerType * ptrType = PointerType::get(elementType);
 
-      //  LocalVariable * var = static_cast<LocalVariable *>(module->newVarValue(type_node->type, id_node->name));
+          // var = static_cast<LocalVariable *>(module->newVarValue(ptrType, id_node->sons[0]->name));
+          // var->setArrayDimensions(id_node->array_dims);
+        } else { //处理未初始化变量
+            var = static_cast<LocalVariable *>(module->newVarValue(type_node->type, id_node->name));
+        }
+
         // 检查是否是带初始化的声明（赋值节点）
         if (id_node->node_type == ast_operator_type::AST_OP_ASSIGN) {
             // 获取赋值节点的左右操作数
-           // ast_node * left = id_node->sons[0];
             ast_node * right = id_node->sons[1];
 
             // 处理右侧初始化表达式
@@ -1207,17 +1224,13 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
 
             // 生成赋值指令
             MoveInstruction * movInst = new MoveInstruction(currentFunc, var, right_val_node->val);
-
             // 将初始化指令添加到当前节点
             node->blockInsts.addInst(right_val_node->blockInsts);
             node->blockInsts.addInst(movInst);
-            
-        }
+        } 
         node->val = var;
-	
-
         return true;
-    }
+        }
 
     // @brief  生成分支AST（if）节点翻译成线性中间IR
     /// @param node AST节点
@@ -1547,6 +1560,91 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
 
         // 逻辑非的结果即为子表达式的结果（但跳转标签已反转）
         node->val = child_val_node->val;
+
+        return true;
+    }
+
+    /// @brief 数组访问节点array_access翻译成线性中间IR
+    /// @param node AST节点
+    /// @return 翻译是否成功，true：成功，false：失败
+    bool IRGenerator::ir_array_index(ast_node * node)
+    {
+        Function * currentFunc = module->getCurrentFunction();
+
+        // 1. 获取数组基地址
+        ast_node * arrayNode = ir_visit_ast_node(node->sons[0]); // a[][] a 节点
+        Value * baseAddr = arrayNode->val;
+        std::vector<int> dims;
+        dims = arrayNode->val->getArrayDimensions();
+
+        // 2. 计算多维下标偏移
+        Value * offset = nullptr;
+        for (size_t i = 1; i < node->sons.size(); i++) {
+            ast_node * indexNode = ir_visit_ast_node(node->sons[i]);
+
+            // 第一维：offset = index
+            if (!offset) {
+                offset = indexNode->val;
+            }
+            // 后续维：offset = offset * dim_size + index
+            else {
+                // 获取当前维度大小（从符号表中查询）
+                int dim_size;
+                dim_size = dims[i - 1]; // 修正：dims 索引从0开始
+                Value * dimVal = module->newConstInt(dim_size);
+
+                // offset = offset * dim_size
+                BinaryInstruction * mulInst = new BinaryInstruction(currentFunc,
+                                                                    IRInstOperator::IRINST_OP_MUL_I,
+                                                                    offset,
+                                                                    dimVal,
+                                                                    IntegerType::getTypeInt());
+                node->blockInsts.addInst(mulInst);
+
+                // offset = offset + index
+                BinaryInstruction * addInst = new BinaryInstruction(currentFunc,
+                                                                    IRInstOperator::IRINST_OP_ADD_I,
+                                                                    mulInst,
+                                                                    indexNode->val,
+                                                                    IntegerType::getTypeInt());
+                node->blockInsts.addInst(addInst);
+                offset = addInst;
+            }
+        } //多维度
+
+        // 3. 计算元素偏移（考虑元素大小）
+        Value * elemSize = module->newConstInt(4); // int类型大小
+        BinaryInstruction * elemOffsetInst = new BinaryInstruction(currentFunc,
+                                                                   IRInstOperator::IRINST_OP_MUL_I,
+                                                                   offset,
+                                                                   elemSize,
+                                                                   IntegerType::getTypeInt());
+        node->blockInsts.addInst(elemOffsetInst);
+
+        
+        const Type * elementType = baseAddr->getType()->getRootType();                   // 使用 const Type*
+        const PointerType * ptrType = PointerType::get(const_cast<Type *>(elementType)); // 移除 const
+
+        // 4. 计算最终地址最后加入基地址
+        BinaryInstruction * addrInst =new BinaryInstruction(currentFunc,
+                                  IRInstOperator::IRINST_OP_ADD_I,
+                                  baseAddr,
+                                  elemOffsetInst,
+                                  const_cast<Type *>(reinterpret_cast<const Type *>(ptrType))); // 移除 const
+        node->blockInsts.addInst(addrInst);
+
+        if (!(node->fatherIsAssign))  //对于那些赋节点不是assign的数组索引：比如return + ,把数组的值赋给一个临时变量，这样上层直接使用这个临时变量就可以
+		{
+            MinusInstruction * LoadInst = new MinusInstruction(module->getCurrentFunction(),
+                                                               IRInstOperator::IRINST_OP_LOAD,
+                                                               addrInst,
+                                                               IntegerType::getTypeInt());
+            node->blockInsts.addInst(LoadInst);
+            node->val = LoadInst;
+			return true;
+        }
+        
+       node->val = addrInst; 
 
         return true;
     }

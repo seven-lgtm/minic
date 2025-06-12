@@ -117,6 +117,14 @@ string getNodeName(ast_node * astnode)
             nodeName = "!";
             break;
 
+		case ast_operator_type::AST_OP_ARRAY_INDEX://数组下标访问节点
+            nodeName = "array_index";
+            break;
+        case ast_operator_type::AST_OP_ARRAY_DECL: //数组声明节点
+            nodeName = "array_decl";
+            break;
+
+
 		
 
         case ast_operator_type::AST_OP_FUNC_CALL:

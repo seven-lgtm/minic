@@ -51,6 +51,14 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitVarDef(MiniCParser::VarDefContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitArraySuffix(MiniCParser::ArraySuffixContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitBasicType(MiniCParser::BasicTypeContext *ctx) override {
     return visitChildren(ctx);
   }
@@ -135,11 +143,11 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual std::any visitVarDef(MiniCParser::VarDefContext *ctx) override {
+  virtual std::any visitLVal(MiniCParser::LValContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitLVal(MiniCParser::LValContext *ctx) override {
+  virtual std::any visitArrayIndexing(MiniCParser::ArrayIndexingContext *ctx) override {
     return visitChildren(ctx);
   }
 

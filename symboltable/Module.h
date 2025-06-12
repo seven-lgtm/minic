@@ -159,16 +159,12 @@ protected:
     /// \return 变量对应的值
     ConstInt * findConstInt(int32_t val);
 
-    
-    //GlobalVariable * newGlobalVariable(Type * type, std::string name);  //原来的新建全局变量
-	
-
-    
+    // GlobalVariable * newGlobalVariable(Type * type, std::string name);  //原来的新建全局变量
 
     /// @brief 根据变量名获取当前符号（只管理全局变量）
     /// \param name 变量名
     /// \return 变量对应的值
-   // GlobalVariable * findGlobalVariable(std::string name);// 修改过 从protect到public
+    // GlobalVariable * findGlobalVariable(std::string name);// 修改过 从protect到public
 
     /// @brief 直接插入函数到符号表中，不考虑现有的表中是否存在
     /// @param func 函数对象
@@ -213,4 +209,4 @@ private:
 
     /// @brief 常量表
     std::unordered_map<int32_t, ConstInt *> constIntMap;
-};
+    };
