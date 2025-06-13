@@ -27,24 +27,32 @@ Module::Module(std::string _name) : name(_name)
     // 确保全局变量作用域入栈，这样全局变量才可以加入
     scopeStack->enterScope();
 
-    // 加入内置函数putint getint putch getch
+    // 加入内置函数putint getint putch getch getarray  putarray
     (void) newFunction("putint", VoidType::getType(), {new FormalParam{IntegerType::getTypeInt(), ""}}, true);
     (void) newFunction("getint", IntegerType::getTypeInt(), {}, true);
     (void) newFunction("putch", VoidType::getType(), {new FormalParam{IntegerType::getTypeInt(), ""}}, true);
     (void) newFunction("getch", IntegerType::getTypeInt(), {}, true);
-   // int getarray(int a[]);
-   // void putarray(int n, int a[]);
-    /*std::vector<FormalParam*> getarrayParams = {
-         new FormalParam(new ArrayType(IntegerType::getTypeInt()), "a")
-     };
-     (void)newFunction("getarray", IntegerType::getTypeInt(), getarrayParams, true);
+    (void) newFunction("putarray", VoidType::getType(), {new FormalParam{IntegerType::getTypeInt(), "n"}}, true);
 
-     std::vector<FormalParam*> putarrayParams = {
-         new FormalParam(IntegerType::getTypeInt(), "n"),
-         new FormalParam(new ArrayType(IntegerType::getTypeInt()), "a")
-     };
-     (void)newFunction("putarray", VoidType::getType(), putarrayParams, true);
- }*/
+  //  const Type * elementType = baseAddr->getType()->getRootType();                   // 使用 const Type*
+   // const PointerType * ptrType = PointerType::get(const_cast<Type *>(elementType)); // 移除 const
+
+//const_cast<Type *>(reinterpret_cast<const Type *>(ptrType))
+
+    // int getarray(int a[]);
+    // void putarray(int n, int a[]);
+    /*
+     std::vector<FormalParam*> getarrayParams = {
+          new FormalParam(new ArrayType(IntegerType::getTypeInt()), "a")
+      };
+      (void)newFunction("getarray", IntegerType::getTypeInt(), getarrayParams, true);
+
+      std::vector<FormalParam*> putarrayParams = {
+          new FormalParam(IntegerType::getTypeInt(), "n"),
+          new FormalParam(new ArrayType(IntegerType::getTypeInt()), "a")
+      };
+      (void)newFunction("putarray", VoidType::getType(), putarrayParams, true);
+  */
 }
 
 

@@ -24,7 +24,8 @@ returnType: T_INT       //这里函数返回值是数组的形式 ???
 paramList: param (T_COMMA param)*;
  
  //  int a
-param: basicType T_ID;   //数组作为参数的形式？？？？？
+param: basicType T_ID ;
+//(T_L_BRACKET expr T_R_BRACKET);   //数组作为参数的形式
 
 // 语句块看用作函数体，这里允许多个语句，并且不含任何语句
 block: T_L_BRACE blockItemList? T_R_BRACE; //已经支持空语句{} blockItemListke xuan
@@ -39,17 +40,13 @@ blockItem: statement | varDecl;
 varDecl: basicType varDef (T_COMMA varDef)*  T_SEMICOLON;
 
 // 变量声明，支持变量的初始化 int a,b=3; 
-//varDef: T_ID  (T_ASSIGN expr)?
-	//    | T_ID (T_L_BRACKET expr? T_R_BRACKET)* ; //包括数组 这里还不包括初始化 int [a]
-
+//包括数组 这里还不包括初始化 int [a]
 varDef: T_ID (arraySuffix)? (T_ASSIGN expr)?;
 arraySuffix: (T_L_BRACKET expr T_R_BRACKET)+;
 
 // 基本类型
 basicType: T_INT;
        
-
-
 //  statement
 statement:
 	T_RETURN expr? T_SEMICOLON			# returnStatement   //允许函数返回值为空return;
@@ -103,7 +100,6 @@ primaryExp:
 realParamList: expr (T_COMMA expr)*;
 
 // 左值表达式
-//lVal: T_ID (T_L_BRACKET expr T_R_BRACKET)*; //这里包括数组 
 lVal: T_ID (arrayIndexing)?;
 arrayIndexing: (T_L_BRACKET expr T_R_BRACKET)+;
 

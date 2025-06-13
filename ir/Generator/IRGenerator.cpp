@@ -1203,11 +1203,6 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         } else if (id_node->node_type == ast_operator_type::AST_OP_ARRAY_DECL) { //处理数组   
 			var = static_cast<LocalVariable *>(module->newVarValue(type_node->type, id_node->sons[0]->name));
 			var->setArrayDimensions(id_node->array_dims);
-           //Type * elementType = type_node->type;
-          //  PointerType * ptrType = PointerType::get(elementType);
-
-          // var = static_cast<LocalVariable *>(module->newVarValue(ptrType, id_node->sons[0]->name));
-          // var->setArrayDimensions(id_node->array_dims);
         } else { //处理未初始化变量
             var = static_cast<LocalVariable *>(module->newVarValue(type_node->type, id_node->name));
         }
@@ -1249,33 +1244,30 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         // LabelInstruction * falseLabel = new LabelInstruction(currentFunc);
         LabelInstruction * endLabel = new LabelInstruction(currentFunc);
 
-        cond_node->trueLabel = trueLabel;
+        cond_node->trueLabel = trueLabel; // 把if节点的label传下去
         cond_node->falseLabel = endLabel;
         node->trueLabel = trueLabel;
-        node->falseLabel = endLabel;
+        node->falseLabel = endLabel; //设置if的label
 
         // 生成条件表达式IR
         ast_node * cond_val_node = ir_visit_ast_node(cond_node);
         if (!cond_val_node)
             return false;
+        node->trueLabel = cond_val_node->trueLabel;
+        node->falseLabel = cond_val_node->falseLabel; //如果是取非节点
 
-        // 添加条件跳转指令
-        BranchInstruction * branch = new BranchInstruction(currentFunc, cond_val_node->val, trueLabel, endLabel);
-        node->blockInsts.addInst(cond_val_node->blockInsts);
-        node->blockInsts.addInst(branch);
-
+        BranchInstruction * branch = new BranchInstruction(currentFunc, cond_val_node->val, node->trueLabel, node->falseLabel);
+										node->blockInsts.addInst(cond_val_node->blockInsts);
+										node->blockInsts.addInst(branch);
         // 生成then块的IR
         node->blockInsts.addInst(trueLabel);
-        ir_visit_ast_node(then_block);
-        node->blockInsts.addInst(then_block->blockInsts);
+        if (then_block!=nullptr)
+		{
+			ir_visit_ast_node(then_block);
+            node->blockInsts.addInst(then_block->blockInsts);
+		} // 为了修复if(); 问题
         //then块末尾跳转到end_label
         node->blockInsts.addInst(new GotoInstruction(currentFunc, endLabel));
-
-        // 生成false_label（隐式else）
-        // node->blockInsts.addInst(falseLabel);
-        // 跳转到end_label
-        // node->blockInsts.addInst(new GotoInstruction(currentFunc, endLabel));
-
         // 添加结束标签
         node->blockInsts.addInst(endLabel);
 
@@ -1377,8 +1369,14 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         node->blockInsts.addInst(cond_val_node->blockInsts);
 
         // 3. 条件跳转：若条件为真，进入循环体；否则跳转到出口
-        node->blockInsts.addInst(new BranchInstruction(currentFunc, cond_val_node->val, bodyLabel, exitLabel));
+		// 为了解决while(1)问题 直接无条件跳转
+        if (cond_node->node_type == ast_operator_type::AST_OP_LEAF_LITERAL_UINT)
+		{
+            node->blockInsts.addInst(new GotoInstruction(currentFunc, bodyLabel));
 
+        }else{
+            node->blockInsts.addInst(new BranchInstruction(currentFunc, cond_val_node->val, bodyLabel, exitLabel));
+		}
         // 4. 生成循环体入口点 bodyLabel
         node->blockInsts.addInst(bodyLabel);
 		 //5. 生成循环体的IR
@@ -1457,14 +1455,15 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         left->falseLabel = left_val_node->falseLabel;  //new add
         left->trueLabel = left_val_node->trueLabel;  //这里新增为了解决exp07 这里是为了解决取非节点
 
-
+        node->falseLabel = left_val_node->falseLabel;
+        node->trueLabel = left_val_node->trueLabel;
         node->blockInsts.addInst(left_val_node->blockInsts); //添加左边表达式的IR
 
         // 2. 左表达式为假时直接跳转到父亲节点的falseLabel 否则跳到shortCircuitLabel
         //添加条件跳转指令
-      //  node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, shortCircuitLabel, node->falseLabel));
+        // node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, node->trueLabel,node->falseLabel));
 
-	  node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, left->trueLabel, left->falseLabel));
+         node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, left->trueLabel,left->falseLabel));
 
         // 4. 插入 shortCircuitLabel
         node->blockInsts.addInst(shortCircuitLabel);
@@ -1475,6 +1474,8 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
             return false;
         //right->falseLabel = right_val_node->falseLabel;
         //right->trueLabel = right_val_node->trueLabel;
+        node->falseLabel = right_val_node->falseLabel;  //解决exp08
+        node->trueLabel = right_val_node->trueLabel;
         node->blockInsts.addInst(right_val_node->blockInsts); //添加右边表达式的IR
 		//node->blockInsts.addInst(new BranchInstruction(currentFunc, right_val_node->val, shortCircuitLabel, node->falseLabel));
 
@@ -1511,10 +1512,12 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
             return false;
        left->falseLabel = left_val_node->falseLabel;  //new add
        left->trueLabel = left_val_node->trueLabel;  //这里新增为了解决exp07
+       node->falseLabel = left_val_node->falseLabel;  //解决exp08
+       node->trueLabel = left_val_node->trueLabel;
 
-        node->blockInsts.addInst(left_val_node->blockInsts);
+       node->blockInsts.addInst(left_val_node->blockInsts);
 
-        // 3. 左表达式为真时直接跳转到trueLabel 否则跳到shortCircuitLabel
+       // 3. 左表达式为真时直接跳转到trueLabel 否则跳到shortCircuitLabel
        node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, left->trueLabel, left->falseLabel));
 
 	  // node->blockInsts.addInst(new BranchInstruction(currentFunc, left_val_node->val, left->trueLabel, left->falseLabel));
@@ -1527,7 +1530,10 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         ast_node * right_val_node = ir_visit_ast_node(right);
         if (!right_val_node)
             return false;
-        node->blockInsts.addInst(right_val_node->blockInsts);
+
+        node->falseLabel = right_val_node->falseLabel;
+        node->trueLabel = right_val_node->trueLabel;
+        node->blockInsts.addInst(right_val_node->blockInsts); //解决exp08
 
         node->val = right_val_node->val; //结果还是right_val_node->val
 
@@ -1537,6 +1543,7 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
     /// @brief 逻辑非（!）节点翻译成线性中间IR
     /// @param node AST节点
     /// @return 翻译是否成功，true：成功，false：失败
+	
     bool IRGenerator::ir_not(ast_node * node)
     {
         ast_node * child = node->sons[0]; // 子表达式节点
@@ -1563,8 +1570,40 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
 
         return true;
     }
+/*
+    bool IRGenerator::ir_not(ast_node * node)
+    {
+        ast_node * child = node->sons[0]; // 子表达式节点
 
-    /// @brief 数组访问节点array_access翻译成线性中间IR
+        // 反转父节点的真/假出口标签
+        child->trueLabel = node->falseLabel; // 子表达式为真时，跳转到父节点的falseLabel
+        child->falseLabel = node->trueLabel; // 子表达式为假时，跳转到父节点的trueLabel
+
+        node->falseLabel = child->falseLabel;
+        node->trueLabel = child->trueLabel;
+
+        // 生成子表达式的代码
+        ast_node * child_val_node = ir_visit_ast_node(child);
+        if (!child_val_node)
+            return false;
+
+        // 合并子表达式的IR指令
+        node->blockInsts.addInst(child_val_node->blockInsts);
+
+        // 生成逻辑非指令：将子表达式的结果与0比较，相等则为真（即取非）
+        BinaryInstruction * notInst = new BinaryInstruction(module->getCurrentFunction(),
+                                                            IRInstOperator::IRINST_OP_EQ_I,
+                                                            child_val_node->val,
+                                                            module->newConstInt(0), // 与0比较
+                                                            IntegerType::getTypeBool());
+        node->blockInsts.addInst(notInst);
+
+        // 逻辑非的结果
+        node->val = notInst;
+
+        return true;
+    }*/
+    /// @brief 数组访问节点array_index翻译成线性中间IR
     /// @param node AST节点
     /// @return 翻译是否成功，true：成功，false：失败
     bool IRGenerator::ir_array_index(ast_node * node)
@@ -1581,6 +1620,7 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
         Value * offset = nullptr;
         for (size_t i = 1; i < node->sons.size(); i++) {
             ast_node * indexNode = ir_visit_ast_node(node->sons[i]);
+            node->blockInsts.addInst(indexNode->blockInsts);//如果节点是表达式 比如array[i-1]
 
             // 第一维：offset = index
             if (!offset) {

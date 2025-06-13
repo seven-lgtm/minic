@@ -722,6 +722,7 @@ std::any MiniCCSTVisitor::visitExpressionStatement(MiniCParser::ExpressionStatem
     } else {
         // 只有分号
         // 直接返回空指针，需要再把语句加入到语句块时要注意判断，空语句不要加入
-        return nullptr;  //当程序里面有单独的分号的处理
+       // return nullptr;  //当程序里面有单独的分号的处理
+        return static_cast<ast_node *>(nullptr);
     }
 }
