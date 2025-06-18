@@ -133,5 +133,7 @@ public:
     int getTotalSize();
     void setArrayDimensions(std::vector<int> & dims);
     std::vector<int> & getArrayDimensions();
-    
+
+	//bool isArray=false;
+    bool isFormalArr = false;
 };

@@ -24,8 +24,9 @@ returnType: T_INT       //这里函数返回值是数组的形式 ???
 paramList: param (T_COMMA param)*;
  
  //  int a
-param: basicType T_ID ;
-//(T_L_BRACKET expr T_R_BRACKET);   //数组作为参数的形式
+param: basicType T_ID arrayParam? ;
+arrayParam: (T_L_BRACKET expr? T_R_BRACKET)+;
+//支持数组作为参数的形式
 
 // 语句块看用作函数体，这里允许多个语句，并且不含任何语句
 block: T_L_BRACE blockItemList? T_R_BRACE; //已经支持空语句{} blockItemListke xuan
@@ -79,7 +80,6 @@ addOp: T_ADD | T_SUB;
 // 乘除模表达式（中等优先级）
 mulExp: unaryExp (mulOp unaryExp)*;
 mulOp: T_MUL | T_DIV | T_MOD;
-
 
 
 // 一元表达式（最高优先级）

@@ -32,27 +32,13 @@ Module::Module(std::string _name) : name(_name)
     (void) newFunction("getint", IntegerType::getTypeInt(), {}, true);
     (void) newFunction("putch", VoidType::getType(), {new FormalParam{IntegerType::getTypeInt(), ""}}, true);
     (void) newFunction("getch", IntegerType::getTypeInt(), {}, true);
-    (void) newFunction("putarray", VoidType::getType(), {new FormalParam{IntegerType::getTypeInt(), "n"}}, true);
 
-  //  const Type * elementType = baseAddr->getType()->getRootType();                   // 使用 const Type*
-   // const PointerType * ptrType = PointerType::get(const_cast<Type *>(elementType)); // 移除 const
+    (void) newFunction("getarray", IntegerType::getTypeInt(), {new FormalParam{IntegerType::getTypeInt(), "a"}}, true);
 
-//const_cast<Type *>(reinterpret_cast<const Type *>(ptrType))
-
-    // int getarray(int a[]);
-    // void putarray(int n, int a[]);
-    /*
-     std::vector<FormalParam*> getarrayParams = {
-          new FormalParam(new ArrayType(IntegerType::getTypeInt()), "a")
-      };
-      (void)newFunction("getarray", IntegerType::getTypeInt(), getarrayParams, true);
-
-      std::vector<FormalParam*> putarrayParams = {
-          new FormalParam(IntegerType::getTypeInt(), "n"),
-          new FormalParam(new ArrayType(IntegerType::getTypeInt()), "a")
-      };
-      (void)newFunction("putarray", VoidType::getType(), putarrayParams, true);
-  */
+    std::vector<FormalParam *> putarrayParams = {new FormalParam(IntegerType::getTypeInt(), "n"),
+                                                 new FormalParam(IntegerType::getTypeInt(), "a")};
+    (void) newFunction("putarray", VoidType::getType(), putarrayParams, true);
+    
 }
 
 

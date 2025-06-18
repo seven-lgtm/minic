@@ -135,10 +135,10 @@ std::any MiniCCSTVisitor::visitParamList(MiniCParser::ParamListContext * ctx)
 /// @param ctx CST上下文
 std::any MiniCCSTVisitor::visitParam(MiniCParser::ParamContext * ctx)
 {
+	// 识别语法：param: basicType T_ID arraySuffix? ;
+    //arrayParam: (T_L_BRACKET expr? T_R_BRACKET)+;
     // 获取类型
     type_attr typeAttr = std::any_cast<type_attr>(visitBasicType(ctx->basicType()));
-   // type_attr typeAttr = std::any_cast<type_attr>(ctx->basicType());
-
     // 创建类型节点
     ast_node * typeNode = create_type_node(typeAttr);
 
@@ -146,26 +146,39 @@ std::any MiniCCSTVisitor::visitParam(MiniCParser::ParamContext * ctx)
     auto id = ctx->T_ID()->getText();
     int64_t lineNo = ctx->T_ID()->getSymbol()->getLine();
     ast_node * idNode = ast_node::New(id, lineNo);
-
-    // 形参节点：类型 + 变量名 
-    return ast_node::New(ast_operator_type::AST_OP_VAR_DECL, typeNode, idNode, nullptr);
-}
-
-/// @brief 非终结运算符block的遍历
-/// @param ctx CST上下文
-std::any MiniCCSTVisitor::visitBlock(MiniCParser::BlockContext * ctx)
-{
-    // 识别的文法产生式：block : T_L_BRACE blockItemList? T_R_BRACE';
-    if (!ctx->blockItemList()) { 
-        // 语句块没有语句  {}
-        // 为了方便创建一个空的Block节点
-        return create_contain_node(ast_operator_type::AST_OP_BLOCK);
+    if (ctx->arrayParam()) {
+		std::vector<int>dimExprs;
+        ast_node * arrayDecl = create_contain_node(ast_operator_type::AST_OP_ARRAY_DECL);
+        arrayDecl->insert_son_node(idNode);
+        dimExprs.push_back(0); //为了处理第一维度
+        for (auto dimCtx: ctx->arrayParam()->expr()) { // 添加维度信息（形参中维度可为空）int a[][4]
+            ast_node * dimNode = std::any_cast<ast_node *>(visitExpr(dimCtx));
+            dimExprs.push_back(dimNode->integer_val);
+            arrayDecl->insert_son_node(dimNode);
+        }
+        arrayDecl->array_dims = dimExprs; // 该节点维度
+        // 形参节点：类型 + 数组声明
+        return create_contain_node(ast_operator_type::AST_OP_VAR_DECL, typeNode, arrayDecl);
     }
 
-    // 语句块含有语句
+        return ast_node::New(ast_operator_type::AST_OP_VAR_DECL, typeNode, idNode, nullptr);
+    }
 
-    // 内部创建Block节点，并把语句加入，这里不需要创建Block节点
-    return visitBlockItemList(ctx->blockItemList());
+    /// @brief 非终结运算符block的遍历
+    /// @param ctx CST上下文
+    std::any MiniCCSTVisitor::visitBlock(MiniCParser::BlockContext * ctx)
+    {
+        // 识别的文法产生式：block : T_L_BRACE blockItemList? T_R_BRACE';
+        if (!ctx->blockItemList()) {
+            // 语句块没有语句  {}
+            // 为了方便创建一个空的Block节点
+            return create_contain_node(ast_operator_type::AST_OP_BLOCK);
+        }
+
+        // 语句块含有语句
+
+        // 内部创建Block节点，并把语句加入，这里不需要创建Block节点
+        return visitBlockItemList(ctx->blockItemList());
 }
 
 /// @brief 非终结运算符blockItemList的遍历
@@ -629,6 +642,7 @@ std::any MiniCCSTVisitor::visitBasicType(MiniCParser::BasicTypeContext * ctx)
 
 /// @brief 非终结运算符varDef变量定义的遍历
 /// @param ctx CST上下文
+
 std::any MiniCCSTVisitor::visitVarDef(MiniCParser::VarDefContext * ctx)
 { 
 	//识别文法varDef: varDef: T_ID (arraySuffix)? (T_ASSIGN expr)?;
@@ -647,17 +661,19 @@ std::any MiniCCSTVisitor::visitVarDef(MiniCParser::VarDefContext * ctx)
     if (ctx->arraySuffix()) {
         // 这里处理数组
         std::vector<int> dimExprs;
+        //bool isFirstDim = true;
 
         ast_node * arrayNode = create_contain_node(ast_operator_type::AST_OP_ARRAY_DECL);
 		arrayNode->insert_son_node(idNode);
-
         for (auto exprCtx: ctx->arraySuffix()->expr()) {
             ast_node * exprNode = std::any_cast<ast_node *>(visitExpr(exprCtx));
-            dimExprs.push_back(exprNode->integer_val); //计算数组的维度  一个维度有一个exprNode
+			dimExprs.push_back(exprNode->integer_val); //计算数组的维度  一个维度有一个exprNode
             arrayNode->insert_son_node(exprNode);
         }
         arrayNode->array_dims = dimExprs; // 该节点维度
-		return arrayNode; 
+       // idNode->array_dims = dimExprs; //为了数组作为形式参数的情况
+
+        return arrayNode; 
     }
 
     return idNode;// 没有初始化表达式 a=0

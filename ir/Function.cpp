@@ -91,8 +91,17 @@ void Function::toString(std::string & str)
         } else {
             str += ", ";
         }
-
+        // define void @fun(i32 %t0[0][2], i32 %t1) {}
         std::string param_str = param->getType()->toString() + param->getIRName();
+        std::vector<int> dims;
+        dims = param->getArrayDimensions();
+      // param_str += "[" + std::to_string(0) + "]"; //第0个维度
+        if (!dims.empty()) {
+         // param_str += "[" + std::to_string(0) + "]";//第0个维度
+            for (auto num: dims) {
+				param_str += "[" + std::to_string(num) + "]";
+			}
+		}
 
         str += param_str;
     }
@@ -109,6 +118,10 @@ void Function::toString(std::string & str)
         str += "\tdeclare " + var->getType()->toString() + " " + var->getIRName();
         std::vector<int> dims = var->array_dims;
         if (!dims.empty()) {
+			//if(var->isFormalArr)
+			//{
+             //   str += "[" + std::to_string(0) + "]";
+            //}
             for (auto num: dims) {
                 str += "[" + std::to_string(num) + "]";
             }

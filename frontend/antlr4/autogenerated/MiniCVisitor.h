@@ -29,6 +29,8 @@ public:
 
     virtual std::any visitParam(MiniCParser::ParamContext *context) = 0;
 
+    virtual std::any visitArrayParam(MiniCParser::ArrayParamContext *context) = 0;
+
     virtual std::any visitBlock(MiniCParser::BlockContext *context) = 0;
 
     virtual std::any visitBlockItemList(MiniCParser::BlockItemListContext *context) = 0;

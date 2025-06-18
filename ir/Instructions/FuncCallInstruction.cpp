@@ -72,7 +72,16 @@ void FuncCallInstruction::toString(std::string & str)
 
             str += operand->getType()->toString() + " " + operand->getIRName();
 
-            if (k != (operandsNum - 1)) {
+           // call void @fun(i32 % l1[7], i32 3)
+            auto dims = operand->getArrayDimensions();
+            if (!dims.empty()) {
+                for (auto dim: dims) {
+                    str += "[" + std::to_string(dim) + "]";
+                }
+            }
+
+                if (k != (operandsNum - 1))
+            {
                 str += ", ";
             }
         }

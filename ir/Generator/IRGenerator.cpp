@@ -100,7 +100,7 @@ IRGenerator::IRGenerator(ast_node * _root, Module * _module) : root(_root), modu
 
         /*数组相关*/
     ast2ir_handlers[ast_operator_type::AST_OP_ARRAY_INDEX] = &IRGenerator::ir_array_index;
-    //ast2ir_handlers[ast_operator_type::AST_OP_ARRAY_DECL] = &IRGenerator::ir_array_declare;
+   
 
     /* 语句块 */
     ast2ir_handlers[ast_operator_type::AST_OP_BLOCK] = &IRGenerator::ir_block;
@@ -296,7 +296,6 @@ bool IRGenerator::ir_function_define(ast_node * node)
 	// 新建一个Value，用于保存函数的返回值，如果没有返回值可不用申请
     LocalVariable * retValue = nullptr;
 
-    
     if (!type_node->type->isVoidType()) {
 
         // 保存函数返回值变量到函数信息中，在return语句翻译时需要设置值到这个变量中
@@ -367,10 +366,6 @@ bool IRGenerator::ir_function_formal_params(ast_node * node)
     }
     auto & params = currentFunc->getParams();
 
-    // ScopeStack * scopeStack=module->scopeStack;
-    // 获取函数的IR指令列表
-    // InterCode & irCode = currentFunc->getInterCode();
-
     // 遍历所有形参声明
     for (auto son: node->sons) { // 形参声明节点 (AST_OP_VAR_DECL)
 
@@ -379,8 +374,27 @@ bool IRGenerator::ir_function_formal_params(ast_node * node)
         // 获取类型节点和标识符节点
         ast_node * type_node = param_decl->sons[0];
         ast_node * id_node = param_decl->sons[1];
+        if (id_node->node_type == ast_operator_type::AST_OP_ARRAY_DECL){ //处理数组作为形参的情况
+            FormalParam * formalParam = new FormalParam(type_node->type, id_node->sons[0]->name);
+			//formalParam->isFormalArr=true;
+            formalParam->setArrayDimensions(id_node->array_dims);
+            params.push_back(formalParam);
+            LocalVariable * paramVar =
+                currentFunc->newLocalVarValue(type_node->type, id_node->sons[0]->name, module->getScopeLevel());
+           // paramVar->isFormalArr = true;
+            paramVar->setArrayDimensions(id_node->array_dims);
+            module->getScopeStack()->insertValue(paramVar);
 
-        //1. 将形参添加到函数的形参列表
+            MoveInstruction * movInst = new MoveInstruction(currentFunc,
+                                                            paramVar,   // 目标：局部变量
+                                                            formalParam // 源：临时变量（由调用者设置）
+            );
+
+            node->blockInsts.addInst(movInst);
+        }else{ //处理平常情况
+
+           
+        // 1. 将形参添加到函数的形参列表
         FormalParam * formalParam = new FormalParam(type_node->type, id_node->name);
         params.push_back(formalParam);
 
@@ -388,12 +402,10 @@ bool IRGenerator::ir_function_formal_params(ast_node * node)
         LocalVariable * paramVar = 
             currentFunc->newLocalVarValue(type_node->type, id_node->name, module->getScopeLevel());
 
-        //module->scopeStack->insertValue(paramVar);
         module->getScopeStack()->insertValue(paramVar);
 
         // 3. 将形参添加到函数的形参列表
-        // currentFunc->getParams().push_back(new FormalParam(paramVar->getType(), paramVar->getName()));
-
+      
          // 5. 生成赋值指令：将临时变量值赋给局部变量
          // 这样函数体就可以使用形参的值了
         MoveInstruction * movInst = new MoveInstruction(currentFunc,
@@ -403,6 +415,7 @@ bool IRGenerator::ir_function_formal_params(ast_node * node)
 
         // 6. 添加到IR指令列表（在Entry指令之后）
          node->blockInsts.addInst(movInst);
+	}
     }
 
     return true;
@@ -410,6 +423,7 @@ bool IRGenerator::ir_function_formal_params(ast_node * node)
 /// @brief 函数调用AST节点翻译成线性中间IR
 /// @param node AST节点
 /// @return 翻译是否成功，true：成功，false：失败
+
 bool IRGenerator::ir_function_call(ast_node * node)
 {
     std::vector<Value *> realParams;
@@ -440,7 +454,7 @@ bool IRGenerator::ir_function_call(ast_node * node)
     // 如果没有孩子，也认为是没有参数
     if (!paramsNode->sons.empty()) { // paramsNode 实际参数列表节点
 
-        int32_t argsCount = (int32_t) paramsNode->sons.size();  //实际参数的个数
+        int32_t argsCount = (int32_t) paramsNode->sons.size(); //实际参数的个数
 
         // 当前函数中调用函数实参个数最大值统计，实际上是统计实参传参需在栈中分配的大小
         // 因为目前的语言支持的int和float都是四字节的，只统计个数即可
@@ -450,24 +464,27 @@ bool IRGenerator::ir_function_call(ast_node * node)
 
         // 遍历参数列表，孩子是表达式
         // 这里自左往右计算表达式
-        for (auto son: paramsNode->sons) {  
+        for (auto son: paramsNode->sons) {
 
             // 遍历Block的每个语句，进行显示或者运算
             ast_node * temp = ir_visit_ast_node(son);
             if (!temp) {
                 return false;
             }
+            Value * arrayVar = module->findVarValue(temp->val->getName());
+            if (arrayVar) {
+                // 将维度信息附加到Value中
+                std::vector<int> dims;
+                dims = arrayVar->getArrayDimensions();
+                if (!dims.empty()) {
+                    temp->val->setArrayDimensions(dims);
+                }
+            } //解决形式参数是数组问题
 
-            realParams.push_back(temp->val);
-           
-			node->blockInsts.addInst(temp->blockInsts);
-			/*
-			ArgInstruction* argInst = new ArgInstruction(
-				currentFunc,
-				temp->val
-			);
-            node->blockInsts.addInst(argInst);
-*/
+            realParams.push_back(temp->val); //加入实际参数列表
+
+            node->blockInsts.addInst(temp->blockInsts);
+
         } //计算为孩子节点生成IR
     }
 
@@ -480,8 +497,8 @@ bool IRGenerator::ir_function_call(ast_node * node)
 
     // 返回调用有返回值，则需要分配临时变量，用于保存函数调用的返回值
     Type * type = calledFunction->getReturnType();
- 
-	//生成函数调用指令
+
+    //生成函数调用指令
     FuncCallInstruction * funcCallInst = new FuncCallInstruction(currentFunc, calledFunction, realParams, type);
 
     // 函数调用指令加入现在的node
@@ -492,6 +509,119 @@ bool IRGenerator::ir_function_call(ast_node * node)
 
     return true;
 }
+/*
+bool IRGenerator::ir_function_call(ast_node * node)
+{
+    std::vector<Value *> realParams;
+
+    // 获取当前正在处理的函数
+    Function * currentFunc = module->getCurrentFunction();
+
+    // 函数调用的节点包含两个节点：
+    // 第一个节点：函数名节点
+    // 第二个节点：实参列表节点
+
+    std::string funcName = node->sons[0]->name; //函数名节点 eg:sum
+    int64_t lineno = node->sons[0]->line_no;
+
+    ast_node * paramsNode = node->sons[1]; // 实参列表节点:real-params
+
+    // 根据函数名查找函数，看是否存在。若不存在则出错
+    // 这里约定函数必须先定义后使用
+    auto calledFunction = module->findFunction(funcName);
+    if (nullptr == calledFunction) {
+        minic_log(LOG_ERROR, "函数(%s)未定义或声明", funcName.c_str());
+        return false;
+    }
+
+    // 当前函数存在函数调用
+    currentFunc->setExistFuncCall(true);
+
+    // 如果没有孩子，也认为是没有参数
+    if (!paramsNode->sons.empty()) { // paramsNode 实际参数列表节点
+
+        int32_t argsCount = (int32_t) paramsNode->sons.size(); //实际参数的个数
+        if (argsCount > currentFunc->getMaxFuncCallArgCnt()) {
+            currentFunc->setMaxFuncCallArgCnt(argsCount);
+        }
+        
+            // 遍历参数列表，孩子是表达式
+            // 这里自左往右计算表达式
+            for (auto son: paramsNode->sons) { //
+                if (son->node_type == ast_operator_type::AST_OP_ARRAY_INDEX && paramsNode->sons.size() > 11) {
+                    ast_node * temp = ir_visit_ast_node(son->sons[0]);
+                    if (!temp) {
+                        return false;
+                    }
+
+                    LocalVariable * paramVar = currentFunc->newLocalVarValue(IntegerType::getTypeInt(),
+                                                                             son->sons[0]->name,
+                                                                             module->getScopeLevel());
+                   // FormalParam * paramVar = new FormalParam(IntegerType::getTypeInt(), son->sons[0]->name);
+
+                    Value * baseArray = module->findVarValue(son->sons[0]->name);
+                    if (baseArray) {
+                        std::vector<int> dims = baseArray->getArrayDimensions(); // 3 0 1 2:2 2 2
+
+                        // 计算降维后的维度（去掉已索引的维度）
+                        int indexedDims = son->sons.size() - 1; // 减去数组名本身 2
+                        std::vector<int> remainingDims;
+                        //(dims.begin() + indexedDims, dims.end());
+                        for (size_t i = static_cast<size_t>(indexedDims); i < dims.size(); i++) {
+                            remainingDims.push_back(dims[i]);
+                        }
+                        paramVar->setArrayDimensions(remainingDims);
+                    }
+                 //   module->getScopeStack()->insertValue(paramVar);
+                    realParams.push_back(paramVar);
+
+                } else {
+
+                    // 遍历Block的每个语句，进行显示或者运算
+                    ast_node * temp = ir_visit_ast_node(son);
+                    if (!temp) {
+                        return false;
+                    }
+                    Value * arrayVar = module->findVarValue(temp->val->getName());
+                    if (arrayVar) {
+                        // 将维度信息附加到Value中
+                        std::vector<int> dims;
+                        dims = arrayVar->getArrayDimensions();
+                        if (!dims.empty()) {
+                            temp->val->setArrayDimensions(dims);
+                        }
+                    } //解决形式参数是数组问题
+
+                    realParams.push_back(temp->val); //加入实际参数列表
+
+                    node->blockInsts.addInst(temp->blockInsts);
+                }
+
+            } //计算为孩子节点生成IR
+        }
+
+    // TODO 这里请追加函数调用的语义错误检查，这里只进行了函数参数的个数检查等，其它请自行追加。
+    if (realParams.size() != calledFunction->getParams().size()) {
+        // 函数参数的个数不一致，语义错误
+        minic_log(LOG_ERROR, "第%lld行的被调用函数(%s)未定义或声明", (long long) lineno, funcName.c_str());
+        return false;
+    }
+
+    // 返回调用有返回值，则需要分配临时变量，用于保存函数调用的返回值
+    Type * type = calledFunction->getReturnType();
+
+    //生成函数调用指令
+    FuncCallInstruction * funcCallInst = new FuncCallInstruction(currentFunc, calledFunction, realParams, type);
+
+    // 函数调用指令加入现在的node
+    node->blockInsts.addInst(funcCallInst);
+
+    // 函数调用结果Value保存到node中，可能为空，上层节点可利用这个值
+    node->val = funcCallInst;
+
+    return true;
+}
+*/
 
 /// @brief 语句块（含函数体）AST节点翻译成线性中间IR
 /// @param node AST节点
@@ -1570,39 +1700,7 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
 
         return true;
     }
-/*
-    bool IRGenerator::ir_not(ast_node * node)
-    {
-        ast_node * child = node->sons[0]; // 子表达式节点
 
-        // 反转父节点的真/假出口标签
-        child->trueLabel = node->falseLabel; // 子表达式为真时，跳转到父节点的falseLabel
-        child->falseLabel = node->trueLabel; // 子表达式为假时，跳转到父节点的trueLabel
-
-        node->falseLabel = child->falseLabel;
-        node->trueLabel = child->trueLabel;
-
-        // 生成子表达式的代码
-        ast_node * child_val_node = ir_visit_ast_node(child);
-        if (!child_val_node)
-            return false;
-
-        // 合并子表达式的IR指令
-        node->blockInsts.addInst(child_val_node->blockInsts);
-
-        // 生成逻辑非指令：将子表达式的结果与0比较，相等则为真（即取非）
-        BinaryInstruction * notInst = new BinaryInstruction(module->getCurrentFunction(),
-                                                            IRInstOperator::IRINST_OP_EQ_I,
-                                                            child_val_node->val,
-                                                            module->newConstInt(0), // 与0比较
-                                                            IntegerType::getTypeBool());
-        node->blockInsts.addInst(notInst);
-
-        // 逻辑非的结果
-        node->val = notInst;
-
-        return true;
-    }*/
     /// @brief 数组访问节点array_index翻译成线性中间IR
     /// @param node AST节点
     /// @return 翻译是否成功，true：成功，false：失败
