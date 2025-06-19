@@ -109,17 +109,26 @@ protected:
     bool ir_if_else(ast_node * node);
     bool generate_conditional_branch(ast_node * node, bool hasElse);
 
-    /// @brief while break continue AST节点翻译成线性中间IR
+    /// @brief while break continue for AST节点翻译成线性中间IR
     /// @param node AST节点
     /// @return 翻译是否成功，true：成功，false：失败
     bool ir_while(ast_node * node);
     bool ir_break(ast_node * node);
     bool ir_continue(ast_node * node);
+    bool ir_for(ast_node * node);
 
-    /// @brief return节点翻译成线性中间IR
+    /// @brief 自增自减 AST节点翻译成线性中间IR
     /// @param node AST节点
     /// @return 翻译是否成功，true：成功，false：失败
-    bool ir_return(ast_node * node);
+    bool ir_pre_inc(ast_node * node);
+    bool ir_pre_dec(ast_node * node);
+    bool ir_post_inc(ast_node * node);
+    bool ir_post_dec(ast_node * node);
+
+        /// @brief return节点翻译成线性中间IR
+        /// @param node AST节点
+        /// @return 翻译是否成功，true：成功，false：失败
+        bool ir_return(ast_node * node);
 
     /// @brief 类型叶子节点翻译成线性中间IR
     /// @param node AST节点

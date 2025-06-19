@@ -15,10 +15,11 @@ public:
     T_L_PAREN = 1, T_R_PAREN = 2, T_SEMICOLON = 3, T_L_BRACE = 4, T_R_BRACE = 5, 
     T_L_BRACKET = 6, T_R_BRACKET = 7, T_ASSIGN = 8, T_COMMA = 9, T_ADD = 10, 
     T_SUB = 11, T_MOD = 12, T_MUL = 13, T_DIV = 14, T_LT = 15, T_GT = 16, 
-    T_LE = 17, T_GE = 18, T_EQ = 19, T_NE = 20, T_AND = 21, T_OR = 22, T_NOT = 23, 
-    T_RETURN = 24, T_INT = 25, T_VOID = 26, T_IF = 27, T_ELSE = 28, T_BREAK = 29, 
-    T_CONTINUE = 30, T_WHILE = 31, T_ID = 32, T_DECIMAL = 33, T_OCTAL = 34, 
-    T_HEX = 35, LINE_COMMENT = 36, BLOCK_COMMENT = 37, WS = 38
+    T_LE = 17, T_GE = 18, T_EQ = 19, T_NE = 20, T_INC = 21, T_DEC = 22, 
+    T_AND = 23, T_OR = 24, T_NOT = 25, T_RETURN = 26, T_INT = 27, T_VOID = 28, 
+    T_IF = 29, T_ELSE = 30, T_BREAK = 31, T_CONTINUE = 32, T_WHILE = 33, 
+    T_FOR = 34, T_ID = 35, T_DECIMAL = 36, T_OCTAL = 37, T_HEX = 38, LINE_COMMENT = 39, 
+    BLOCK_COMMENT = 40, WS = 41
   };
 
   explicit MiniCLexer(antlr4::CharStream *input);

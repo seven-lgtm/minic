@@ -117,8 +117,16 @@ enum class ast_operator_type : int {
 
     // TODO 抽象语法树其它内部节点运算符追加
 
-    AST_OP_ARRAY_INDEX, // 新增：数组下标访问节点
-    AST_OP_ARRAY_DECL,  // 新增：数组声明节点
+    AST_OP_ARRAY_INDEX, // new:数组下标访问节点
+    AST_OP_ARRAY_DECL,  // new:数组声明节点
+
+    AST_OP_FOR,      // for循环
+    AST_OP_PRE_INC,  // 前缀自增 ++a
+    AST_OP_PRE_DEC,  // 前缀自减 --a
+    AST_OP_POST_INC, // 后缀自增 a++
+    AST_OP_POST_DEC, // 后缀自减 a--
+
+	AST_OP_NO,
 
     /// @brief 最大标识符，表示非法运算符
     AST_OP_MAX,
@@ -203,6 +211,7 @@ public:
     /// @param parent 父节点
     /// @param node 节点
     ast_node * insert_son_node(ast_node * node);
+
 
     /// @brief 创建指定节点类型的节点，最后一个孩子节点必须指定为nullptr。
     /// @param type 节点类型

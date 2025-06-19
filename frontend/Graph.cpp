@@ -123,9 +123,26 @@ string getNodeName(ast_node * astnode)
         case ast_operator_type::AST_OP_ARRAY_DECL: //数组声明节点
             nodeName = "array_decl";
             break;
+            
 
-
-		
+        case ast_operator_type::AST_OP_FOR : //for
+             nodeName = "for";
+            break;
+        case ast_operator_type::AST_OP_NO: // for
+            nodeName = "no";
+            break;
+        case ast_operator_type::AST_OP_PRE_INC: //++i
+            nodeName = "++_pre";
+            break;
+        case ast_operator_type::AST_OP_PRE_DEC://--i
+            nodeName = "--_pre";
+            break;
+        case ast_operator_type::AST_OP_POST_INC: //i++
+            nodeName = "post_++";
+            break;
+        case ast_operator_type::AST_OP_POST_DEC: //i--
+            nodeName = "post_--";
+            break;
 
         case ast_operator_type::AST_OP_FUNC_CALL:
             nodeName = "func-call";

@@ -129,6 +129,30 @@ protected:
     ///
     std::any visitContinueStatement(MiniCParser::ContinueStatementContext * ctx) override;
 
+    ///
+    /// @brief 内部产生的非终结符forStatement的分析
+    /// @param ctx CST上下文
+    /// @return std::any AST的节点
+    ///
+    std::any visitForStatement(MiniCParser::ForStatementContext * ctx) override;
+
+    ///
+    /// @brief 内部产生的非终结符varDeclNoSemi的分析
+    /// @param ctx CST上下文
+    /// @return std::any AST的节点
+    ///
+    std::any visitVarDeclNoSemi(MiniCParser::VarDeclNoSemiContext * ctx) override;
+    
+
+        ///
+        /// @brief 内部产生的非终结符forInit的分析
+        /// @param ctx CST上下文
+        /// @return std::any AST的节点
+        ///
+    std::any visitForInit(MiniCParser::ForInitContext * ctx) override;
+
+    std::any visitAssignNoSemi(MiniCParser::AssignNoSemiContext * ctx) override;
+
     /// @brief 非终结运算符expr的遍历
     /// @param ctx CST上下文
     /// @return AST的节点
@@ -188,11 +212,17 @@ protected:
     std::any visitMulOp(MiniCParser::MulOpContext * ctx) override;
 
     ///
-    /// @brief 非终结符unaryExp的分析
+    /// @brief 非终结符unaryExp的分析:以上四条
     /// @param ctx CST上下文
     /// @return std::any AST的节点
     ///
-    std::any visitUnaryExp(MiniCParser::UnaryExpContext * ctx) override;
+    std::any visitUnaryExp(MiniCParser::UnaryExpContext * ctx) ;
+
+    std::any visitFunctionCall(MiniCParser::FunctionCallContext * ctx) override;
+
+    std::any visitPostfixUnary(MiniCParser::PostfixUnaryContext * ctx) override;
+
+    std::any visitPrefixUnary(MiniCParser::PrefixUnaryContext * ctx) override;
 
     ///
     /// @brief 非终结符PrimaryExp的分析
@@ -242,4 +272,4 @@ protected:
     /// @return std::any AST的节点
     ///
     std::any visitExpressionStatement(MiniCParser::ExpressionStatementContext * context) override;
-};
+    };

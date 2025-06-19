@@ -72,9 +72,20 @@ void CodeGeneratorArm32::genDataSection()
             fprintf(fp, ".data\n");
             fprintf(fp, ".align %d\n", var->getAlignment());
             fprintf(fp, ".type %s, %%object\n", var->getName().c_str());
-            fprintf(fp, "%s\n", var->getName().c_str());
-            // TODO 后面设置初始化的值，具体请参考ARM的汇编
-        }
+           
+            if (var->getInitValue()) {
+                // 处理初始化值
+                fprintf(fp, ".size %s, 4\n", var->getName().c_str());
+                fprintf(fp, "%s:\n", var->getName().c_str());
+                if (auto constInt = dynamic_cast<ConstInt *>(var->getInitValue())) {
+                    fprintf(fp, ".word %d\n", constInt->getVal());
+                }
+                // TODO 后面设置初始化的值，具体请参考ARM的汇编
+            }else{
+                fprintf(fp, "%s\n", var->getName().c_str());
+            }
+
+		}
     }
 }
 

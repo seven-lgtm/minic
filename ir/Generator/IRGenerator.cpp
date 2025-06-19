@@ -82,10 +82,17 @@ IRGenerator::IRGenerator(ast_node * _root, Module * _module) : root(_root), modu
     ast2ir_handlers[ast_operator_type::AST_OP_IF] = &IRGenerator::ir_if;
     ast2ir_handlers[ast_operator_type::AST_OP_IF_ELSE] = &IRGenerator::ir_if_else;
 
-    /* while break continue 语句 */
+    /* while break continue for 语句 */
     ast2ir_handlers[ast_operator_type::AST_OP_WHILE] = &IRGenerator::ir_while;
     ast2ir_handlers[ast_operator_type::AST_OP_BREAK] = &IRGenerator::ir_break;
     ast2ir_handlers[ast_operator_type::AST_OP_CONTINUE] = &IRGenerator::ir_continue;
+    ast2ir_handlers[ast_operator_type::AST_OP_FOR] = &IRGenerator::ir_for;
+
+    /* 自增自减运算符 */
+    ast2ir_handlers[ast_operator_type::AST_OP_PRE_INC] = &IRGenerator::ir_pre_inc;
+    ast2ir_handlers[ast_operator_type::AST_OP_PRE_DEC] = &IRGenerator::ir_pre_dec;
+    ast2ir_handlers[ast_operator_type::AST_OP_POST_INC] = &IRGenerator::ir_post_inc;
+    ast2ir_handlers[ast_operator_type::AST_OP_POST_DEC] = &IRGenerator::ir_post_dec;
 
     /* 函数调用 */
     ast2ir_handlers[ast_operator_type::AST_OP_FUNC_CALL] = &IRGenerator::ir_function_call;
@@ -1531,7 +1538,6 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
     bool IRGenerator::ir_break(ast_node * node)
     {
         if (loopStack.empty()) {
-           // minic_log(LOG_ERROR, "break语句不在循环内");
             return false;
         }
         Function * currentFunc = module->getCurrentFunction();
@@ -1548,7 +1554,6 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
     bool IRGenerator::ir_continue(ast_node * node)
     {
         if (loopStack.empty()) {
-           // minic_log(LOG_ERROR, "continue语句不在循环内");
             return false;
         }
         Function * currentFunc = module->getCurrentFunction();
@@ -1786,3 +1791,522 @@ bool IRGenerator::ir_leaf_node_type(ast_node * node)
 
         return true;
     }
+
+/// @brief for语句翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+/*
+    bool IRGenerator::ir_for(ast_node * node)
+    {
+        // for节点有四个孩子：初始化、条件、步进、循环体
+        ast_node * forInit = node->sons[0];   // 初始化语句
+        ast_node * cond_node = node->sons[1]; // 条件表达式
+        ast_node * step_node = node->sons[2]; // 步进表达式
+        ast_node * body_node = node->sons[3]; // 循环体
+
+        Function * currentFunc = module->getCurrentFunction();
+        if (!currentFunc) {
+            return false;
+        }
+
+        // 创建标签
+        LabelInstruction * condLabel = new LabelInstruction(currentFunc); // 条件标签
+        LabelInstruction * bodyLabel = new LabelInstruction(currentFunc); // 循环体标签
+        LabelInstruction * stepLabel = new LabelInstruction(currentFunc); // 步进标签
+        LabelInstruction * exitLabel = new LabelInstruction(currentFunc); // 退出标签
+
+        // 压入循环标签栈（用于break/continue）
+        loopStack.push({exitLabel, stepLabel});
+
+        // 进入for循环作用域
+        module->enterScope();
+
+        // 1. 初始化部分 int i=0;
+        if (forInit) {
+            ast_node * init_result = ir_visit_ast_node(forInit);
+            if (!init_result) {
+                module->leaveScope(); // 错误时退出作用域
+                return false;
+            }
+            node->blockInsts.addInst(init_result->blockInsts);
+        }
+
+        // 2. 无条件跳转到条件判断
+        node->blockInsts.addInst(new GotoInstruction(currentFunc, condLabel));
+
+        // 条件判断标签
+        node->blockInsts.addInst(condLabel);
+
+        // 3. 条件表达式
+        Value * condValue = nullptr;
+        if (cond_node) {
+            ast_node * cond_result = ir_visit_ast_node(cond_node);
+            if (!cond_result) {
+                return false;
+            }
+            node->blockInsts.addInst(cond_result->blockInsts);
+            condValue = cond_result->val;
+        } else {
+            // 如果没有条件，则默认为真
+            condValue = module->newConstInt(1);
+        }
+
+        // 4. 条件跳转：真则进入循环体，假则退出
+        node->blockInsts.addInst(new BranchInstruction(currentFunc, condValue, bodyLabel, exitLabel));
+
+        // 循环体标签
+        node->blockInsts.addInst(bodyLabel);
+
+        // 5. 循环体
+        if (body_node) {
+            ast_node * body_result = ir_visit_ast_node(body_node);
+            if (!body_result) {
+                return false;
+            }
+            node->blockInsts.addInst(body_result->blockInsts);
+        }
+
+        //5.  跳转到步进标签
+        node->blockInsts.addInst(new GotoInstruction(currentFunc, stepLabel));
+
+        // 步进标签
+        node->blockInsts.addInst(stepLabel);
+
+        // 6.  步进表达式 i++
+        if (step_node) {
+            ast_node * step_result = ir_visit_ast_node(step_node);
+            if (!step_result) {
+                return false;
+            }
+            node->blockInsts.addInst(step_result->blockInsts);
+        }
+
+        // 7. 跳转回条件判断 跳到判断是否 i<10
+        node->blockInsts.addInst(new GotoInstruction(currentFunc, condLabel));
+
+        // 退出标签
+        node->blockInsts.addInst(exitLabel);
+
+        module->leaveScope(); //退出作用域
+        loopStack.pop(); //还得看这个
+
+
+            return true;
+    }
+
+
+    bool IRGenerator::ir_for(ast_node * node)
+    {
+        // for节点有四个孩子：初始化、条件、步进、循环体
+        ast_node * forInit = node->sons.size() > 0 ? node->sons[0] : nullptr;   // 初始化语句（可选）
+        ast_node * cond_node = node->sons.size() > 1 ? node->sons[1] : nullptr; // 条件表达式（可选）
+        ast_node * step_node = node->sons.size() > 2 ? node->sons[2] : nullptr; // 步进表达式（可选）
+        ast_node * body_node = node->sons.size() > 3 ? node->sons[3] : nullptr; // 循环体（可选）
+
+        Function * currentFunc = module->getCurrentFunction();
+        if (!currentFunc) {
+            return false;
+        }
+
+        // 创建标签
+        LabelInstruction * condLabel = new LabelInstruction(currentFunc); // 条件标签
+        LabelInstruction * bodyLabel = new LabelInstruction(currentFunc); // 循环体标签
+        LabelInstruction * stepLabel = new LabelInstruction(currentFunc); // 步进标签
+        LabelInstruction * exitLabel = new LabelInstruction(currentFunc); // 退出标签
+
+        // 压入循环标签栈（用于break/continue）
+        loopStack.push({exitLabel, stepLabel});
+
+        // 进入for循环作用域（只在有初始化变量时创建作用域）
+        bool hasScope = false;
+        if (forInit && forInit->node_type == ast_operator_type::AST_OP_DECL_STMT) {
+            module->enterScope();
+            hasScope = true;
+        }
+
+        // 1. 初始化部分（如果有）
+        if (forInit) {
+            ast_node * init_result = ir_visit_ast_node(forInit);
+            if (!init_result) {
+                if (hasScope)
+                    module->leaveScope();
+                return false;
+            }
+            node->blockInsts.addInst(init_result->blockInsts);
+        }
+
+        // 2. 无条件跳转到条件判断
+        node->blockInsts.addInst(new GotoInstruction(currentFunc, condLabel));
+
+        // 条件判断标签
+        node->blockInsts.addInst(condLabel);
+
+        // 3. 条件表达式（如果有）
+        Value * condValue = nullptr;
+        if (cond_node) {
+            ast_node * cond_result = ir_visit_ast_node(cond_node);
+            if (!cond_result) {
+                if (hasScope)
+                    module->leaveScope();
+                return false;
+            }
+            node->blockInsts.addInst(cond_result->blockInsts);
+            condValue = cond_result->val;
+        } else {
+            // 如果没有条件，则默认为真（无限循环）
+            condValue = module->newConstInt(1);
+        }
+
+        // 4. 条件跳转：真则进入循环体，假则退出
+        node->blockInsts.addInst(new BranchInstruction(currentFunc, condValue, bodyLabel, exitLabel));
+
+        // 循环体标签
+        node->blockInsts.addInst(bodyLabel);
+
+        // 5. 循环体（如果有）
+        if (body_node) {
+            ast_node * body_result = ir_visit_ast_node(body_node);
+            if (!body_result) {
+                if (hasScope)
+                    module->leaveScope();
+                return false;
+            }
+            node->blockInsts.addInst(body_result->blockInsts);
+        }
+
+        // 6. 跳转到步进标签
+        node->blockInsts.addInst(new GotoInstruction(currentFunc, stepLabel));
+
+        // 步进标签
+        node->blockInsts.addInst(stepLabel);
+
+        // 7. 步进表达式（如果有）
+        if (step_node) {
+            ast_node * step_result = ir_visit_ast_node(step_node);
+            if (!step_result) {
+                if (hasScope)
+                    module->leaveScope();
+                return false;
+            }
+            node->blockInsts.addInst(step_result->blockInsts);
+        }
+
+        // 8. 跳转回条件判断
+        node->blockInsts.addInst(new GotoInstruction(currentFunc, condLabel));
+
+        // 退出标签
+        node->blockInsts.addInst(exitLabel);
+
+        // 离开for循环作用域（如果之前创建了）
+        if (hasScope) {
+            module->leaveScope();
+        }
+
+        loopStack.pop();
+
+        return true;
+    }
+	*/
+
+    bool IRGenerator::ir_for(ast_node * node)
+    {
+        // for节点有四个孩子：初始化、条件、步进、循环体
+		/*
+        ast_node * forInit = node->sons.size() > 0 ? node->sons[0] : nullptr;
+        ast_node * cond_node = node->sons.size() > 1 ? node->sons[1] : nullptr;
+        ast_node * step_node = node->sons.size() > 2 ? node->sons[2] : nullptr;
+        ast_node * body_node = node->sons.size() > 3 ? node->sons[3] : nullptr;		
+*/
+		ast_node * forInit = node->sons[0];
+		ast_node * cond_node = node->sons[1];
+		ast_node * step_node = node->sons[2];
+		ast_node * body_node = node->sons[3];
+
+		Function * currentFunc = module->getCurrentFunction();
+		if (!currentFunc) {
+			return false;
+			}
+
+        // 创建标签
+        LabelInstruction * condLabel = new LabelInstruction(currentFunc);
+        LabelInstruction * bodyLabel = new LabelInstruction(currentFunc);
+        LabelInstruction * stepLabel = new LabelInstruction(currentFunc);
+        LabelInstruction * exitLabel = new LabelInstruction(currentFunc);
+
+        // 压入循环标签栈
+        loopStack.push({exitLabel, stepLabel});
+
+        // 进入for循环作用域（只在有初始化变量时创建）
+        bool hasScope = false;
+        if (forInit && forInit->node_type == ast_operator_type::AST_OP_DECL_STMT) {
+            module->enterScope();
+            hasScope = true;
+        }
+
+        // 1. 初始化部分
+        if (!(forInit->node_type == ast_operator_type::AST_OP_NO)) {
+            ast_node * init_result = ir_visit_ast_node(forInit);
+            if (!init_result) {
+                if (hasScope)
+                    module->leaveScope();
+                return false;
+            }
+            node->blockInsts.addInst(init_result->blockInsts);
+        }
+
+        // 2. 无条件跳转到条件判断
+        node->blockInsts.addInst(new GotoInstruction(currentFunc, condLabel));
+
+        // 条件判断标签
+        node->blockInsts.addInst(condLabel);
+
+        // 3. 条件表达式处理
+        if (cond_node->node_type == ast_operator_type::AST_OP_NO) {
+            // 无条件时：直接跳转到循环体
+            node->blockInsts.addInst(new GotoInstruction(currentFunc, bodyLabel));   
+        } else {
+            // 有条件表达式时：正常处理条件
+            ast_node * cond_result = ir_visit_ast_node(cond_node);
+            if (!cond_result) {
+                if (hasScope)
+                    module->leaveScope();
+                return false;
+            }
+            node->blockInsts.addInst(cond_result->blockInsts);
+
+            // 使用条件跳转
+            node->blockInsts.addInst(new BranchInstruction(currentFunc, cond_result->val, bodyLabel, exitLabel));
+        }
+
+        // 循环体标签
+        node->blockInsts.addInst(bodyLabel);
+
+        // 4. 循环体
+        if (body_node) {
+            ast_node * body_result = ir_visit_ast_node(body_node);
+            if (!body_result) {
+                if (hasScope)
+                    module->leaveScope();
+                return false;
+            }
+            node->blockInsts.addInst(body_result->blockInsts);
+        }
+
+        // 5. 跳转到步进标签
+        node->blockInsts.addInst(new GotoInstruction(currentFunc, stepLabel));
+
+        // 步进标签
+        node->blockInsts.addInst(stepLabel);
+
+        // 6. 步进表达式
+        if (step_node) {
+            ast_node * step_result = ir_visit_ast_node(step_node);
+            if (!step_result) {
+                if (hasScope)
+                    module->leaveScope();
+                return false;
+            }
+            node->blockInsts.addInst(step_result->blockInsts);
+        }
+
+        // 7. 跳转回条件判断
+        node->blockInsts.addInst(new GotoInstruction(currentFunc, condLabel));
+
+        // 退出标签
+        node->blockInsts.addInst(exitLabel);
+
+        // 离开作用域
+        if (hasScope) {
+            module->leaveScope();
+        }
+
+        loopStack.pop();
+
+        return true;
+    }
+/// @brief 后置自增语句翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_post_inc(ast_node * node)
+{
+	// 后缀自增：a++
+	ast_node * child = node->sons[0];
+
+	
+	ast_node * child_result = ir_visit_ast_node(child);
+	if (!child_result) {
+		return false;
+	}
+
+	node->blockInsts.addInst(child_result->blockInsts);
+
+	Function * currentFunc = module->getCurrentFunction();
+
+	// 1. 对于后置自增自减 先放到一个临时变量里面
+	
+    MinusInstruction * LoadInst = new MinusInstruction(module->getCurrentFunction(),
+                                                       IRInstOperator::IRINST_OP_STORE,
+                                                       child_result->val,
+                                                       IntegerType::getTypeInt());
+
+    node->blockInsts.addInst(LoadInst); // t3=l2
+
+    // 2.  加1
+	ConstInt * one = module->newConstInt(1);
+    BinaryInstruction * addInst = new BinaryInstruction(currentFunc,
+                                                        IRInstOperator::IRINST_OP_ADD_I,
+                                                       child_result->val,
+                                                       // LoadInst,
+														 one,
+                                                        IntegerType::getTypeInt());
+    node->blockInsts.addInst(addInst);//t4
+
+	// 3. 存回l2   l2=t4
+    MoveInstruction * StoreInst = new MoveInstruction(module->getCurrentFunction(), child_result->val, addInst);
+   
+    node->blockInsts.addInst(StoreInst);
+
+    // 后缀自增返回旧值
+	
+	if(node->fatherIsAssign)
+	{
+        node->val = LoadInst; //返回t3
+    }else{
+        node->val = StoreInst;
+    }
+   
+
+    return true;
+}
+
+/// @brief 后置自减语句翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_post_dec(ast_node * node)
+{
+    // 后缀自增：a--
+    ast_node * child = node->sons[0];
+
+    ast_node * child_result = ir_visit_ast_node(child);
+    if (!child_result) {
+        return false;
+    }
+
+    node->blockInsts.addInst(child_result->blockInsts);
+
+    Function * currentFunc = module->getCurrentFunction();
+
+	// 1. 放在临时变量里面
+    MinusInstruction * LoadInst = new MinusInstruction(module->getCurrentFunction(),
+                                                       IRInstOperator::IRINST_OP_STORE,
+                                                       child_result->val,
+                                                       IntegerType::getTypeInt());
+
+    node->blockInsts.addInst(LoadInst); // t3=l2
+
+    // 1.  减1
+    ConstInt * one = module->newConstInt(1);
+    BinaryInstruction * addInst = new BinaryInstruction(currentFunc,
+                                                        IRInstOperator::IRINST_OP_SUB_I,
+                                                        child_result->val,
+                                                        one,
+                                                        IntegerType::getTypeInt());
+    node->blockInsts.addInst(addInst); // t4
+
+    // 2. 存回l2   l2=t4
+    MoveInstruction * StoreInst = new MoveInstruction(module->getCurrentFunction(), child_result->val, addInst);
+
+    node->blockInsts.addInst(StoreInst);
+
+    // 后缀自减返回旧值
+    if (node->fatherIsAssign) {
+        node->val = LoadInst; //返回t3
+    } else {
+        node->val = StoreInst;
+    }
+
+    return true;
+}
+
+/// @brief 前缀自增语句翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_pre_inc(ast_node * node)
+{
+    // 前缀自增：++a
+    ast_node * child = node->sons[0]; // 操作数节点
+
+    // 标记需要地址
+   // child->fatherIsAssign = true;
+
+    ast_node * child_result = ir_visit_ast_node(child);
+    if (!child_result) {
+        return false;
+    }
+
+    node->blockInsts.addInst(child_result->blockInsts);
+
+    Function * currentFunc = module->getCurrentFunction();
+
+
+    // 1. 加1
+    ConstInt * one = module->newConstInt(1);
+    BinaryInstruction * addInst = new BinaryInstruction(currentFunc,
+                                                        IRInstOperator::IRINST_OP_ADD_I,
+                                                        child_result->val,
+                                                        one,
+                                                        IntegerType::getTypeInt());
+    node->blockInsts.addInst(addInst);
+
+    // 2.  存回原处
+    
+    MoveInstruction * StoreInst = new MoveInstruction(module->getCurrentFunction(), child_result->val, addInst);
+
+    node->blockInsts.addInst(StoreInst);
+
+    // 前缀自增返回新值
+    node->val = addInst;
+
+    return true;
+}
+
+/// @brief 前缀自减语句翻译成线性中间IR
+/// @param node AST节点
+/// @return 翻译是否成功，true：成功，false：失败
+bool IRGenerator::ir_pre_dec(ast_node * node)
+{
+    // 前缀自增：--a
+    ast_node * child = node->sons[0]; // 操作数节点
+
+    // 标记需要地址
+    // child->fatherIsAssign = true;
+
+    ast_node * child_result = ir_visit_ast_node(child);
+    if (!child_result) {
+        return false;
+    }
+
+    node->blockInsts.addInst(child_result->blockInsts);
+
+    Function * currentFunc = module->getCurrentFunction();
+
+    // 1. -1
+    ConstInt * one = module->newConstInt(1);
+    BinaryInstruction * addInst = new BinaryInstruction(currentFunc,
+                                                        IRInstOperator::IRINST_OP_SUB_I,
+                                                        child_result->val,
+                                                        one,
+                                                        IntegerType::getTypeInt());
+    node->blockInsts.addInst(addInst);
+
+    // 2.  存回原处
+
+    MoveInstruction * StoreInst = new MoveInstruction(module->getCurrentFunction(), child_result->val, addInst);
+
+    node->blockInsts.addInst(StoreInst);
+
+    // 前缀自增返回新值
+    node->val = addInst;
+
+    return true;
+}

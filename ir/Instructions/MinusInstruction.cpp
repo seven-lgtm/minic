@@ -37,6 +37,9 @@ void MinusInstruction::toString(std::string & str)
         case IRInstOperator::IRINST_OP_LOAD: 
             str = getIRName() + " = *" + src->getIRName();
             break;
+        case IRInstOperator::IRINST_OP_STORE:
+            str = getIRName() + " = " + src->getIRName();
+            break;
         default:
             // 未知指令
             Instruction::toString(str);

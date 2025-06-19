@@ -57,10 +57,22 @@ statement:
 	| T_IF T_L_PAREN expr T_R_PAREN statement (T_ELSE statement)?   # ifStatement    
 	| T_WHILE T_L_PAREN expr T_R_PAREN statement    # whileStatement
 	| T_BREAK  T_SEMICOLON        # breakStatement
-	| T_CONTINUE T_SEMICOLON      #continueStatement;
+	| T_CONTINUE T_SEMICOLON	# continueStatement
+	| T_FOR T_L_PAREN (forInit T_SEMICOLON | T_SEMICOLON) (expr T_SEMICOLON | T_SEMICOLON) (expr|assignNoSemi)? T_R_PAREN statement # forStatement;
+		
+
+	// int i=0; 或者 i=0
+forInit:  
+	varDeclNoSemi // 变量声明（无分号）
+	 | assignNoSemi; // 赋值表达式没有分号
 
 
-// 优先级： 逻辑非  乘除取模 加减 关系运算 逻辑与 逻辑或
+varDeclNoSemi: basicType varDef (T_COMMA varDef)*;
+
+assignNoSemi:
+	lVal T_ASSIGN expr;
+
+	// 优先级： 逻辑非  乘除取模 加减 关系运算 逻辑与 逻辑或
 // 表达式文法 expr 
 
 expr: logicalOrExp;
@@ -83,10 +95,17 @@ mulOp: T_MUL | T_DIV | T_MOD;
 
 
 // 一元表达式（最高优先级）
+/* 
 unaryExp:
-	(T_SUB | T_NOT)*  (primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN) // 支持连续负号 取非:对于primaryExp和函数调用
-	| primaryExp // 基础表达式
-	| T_ID T_L_PAREN realParamList? T_R_PAREN; // 函数调用 fun(i)
+	(T_SUB | T_NOT | T_INC | T_DEC )*  (primaryExp | T_ID T_L_PAREN realParamList? T_R_PAREN) // 支持连续负号 取非:对于primaryExp和函数调用
+	| primaryExp ( T_INC | T_DEC)*  // 基础表达式
+	| T_ID T_L_PAREN realParamList? T_R_PAREN;  // 函数调用 fun(i)
+*/
+
+unaryExp: (T_SUB | T_NOT | T_INC | T_DEC)* primaryExp							# prefixUnary
+	| primaryExp (T_INC | T_DEC)*												# postfixUnary
+	| (T_SUB | T_NOT | T_INC | T_DEC)* T_ID T_L_PAREN realParamList? T_R_PAREN	# functionCall;
+
 
 // 基本表达式：括号表达式、整数、左值表达式
 primaryExp:
@@ -134,6 +153,10 @@ T_GE: '>=';
 T_EQ: '==';
 T_NE: '!=';
 
+//自增自减
+T_INC: '++';
+T_DEC: '--';
+
 //逻辑运算
 T_AND:'&&';
 T_OR: '||';
@@ -153,6 +176,8 @@ T_ELSE: 'else';
 T_BREAK:'break';
 T_CONTINUE:'continue';
 T_WHILE:'while';
+T_FOR: 'for';
+
 
 T_ID: [a-zA-Z_][a-zA-Z0-9_]*;
 

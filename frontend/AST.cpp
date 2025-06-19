@@ -132,6 +132,7 @@ ast_node * ast_node::insert_son_node(ast_node * node)
     return this;
 }
 
+
 /// @brief 创建无符号整数的叶子节点
 /// @param attr 无符号整数字面量
 ast_node * ast_node::New(digit_int_attr attr)
